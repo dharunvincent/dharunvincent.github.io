@@ -35,6 +35,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
 
   <style>
+    /* ── Hide native cursor on mouse devices — highest priority ── */
+    @media (hover: hover) and (pointer: fine) {
+      *, *::before, *::after { cursor: none !important; }
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --orange:      #FF6B2B;
@@ -99,10 +103,7 @@
       transition: opacity .3s, width .25s cubic-bezier(.22,1,.36,1), height .25s cubic-bezier(.22,1,.36,1), border-color .25s;
       will-change: transform;
     }
-    /* cursor:none — applied immediately via CSS for mouse devices (no JS flash) */
-    @media (hover: hover) and (pointer: fine) {
-      html, body, * { cursor: none !important; }
-    }
+
     /* JS class adds cursor visibility once confirmed — belt-and-suspenders */
     body.has-cursor { cursor: none; }
     body.has-cursor a,
@@ -1198,6 +1199,12 @@
 
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Hide native cursor immediately on mouse devices
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      document.documentElement.style.cursor = 'none';
+      document.body.style.cursor = 'none';
+    }
 
 
     // Navbar scroll
