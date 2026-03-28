@@ -693,21 +693,95 @@
     }
     .exp-bullets li::before { content:'→'; color:var(--orange); flex-shrink:0; margin-top:.05rem; }
 
-    /* ── Projects (features) ────────────────────────────── */
-    .projects-grid { display:grid; gap:1.25rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
-    .project-card { position:relative; overflow:hidden; border-radius:1.5rem; }
-    .project-card img { width:100%; aspect-ratio:4/3; object-fit:cover; transition:transform .7s cubic-bezier(.22,1,.36,1); }
-    .project-card:hover img { transform:scale(1.05); }
-    .project-overlay { position:absolute; inset:0; background:linear-gradient(to top,#000 0%,rgba(0,0,0,.4) 50%,transparent 100%); }
-    .project-tag {
-      position:absolute; top:1rem; left:1rem;
-      backdrop-filter:blur(16px); background:var(--surface); border:1px solid var(--border);
-      padding:.25rem .75rem; border-radius:9999px;
-      font-size:.65rem; font-weight:500; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.65);
+    /* ── Product Highlight Cards ────────────────────────── */
+    .highlights-grid {
+      display: grid; gap: 1.25rem;
+      grid-template-columns: repeat(4, 1fr);
     }
-    .project-content { position:absolute; bottom:0; left:0; right:0; padding:1.5rem; }
-    .project-content h3 { font-size:1.125rem; font-weight:700; margin-bottom:.375rem; }
-    .project-content p { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.5; }
+    .hl-card {
+      position: relative; overflow: hidden; border-radius: 1.5rem;
+      background: var(--surface); border: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      transition: transform .4s cubic-bezier(.22,1,.36,1), border-color .3s, box-shadow .4s;
+    }
+    .hl-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(255,107,43,.4);
+      box-shadow: 0 28px 56px -16px rgba(0,0,0,.7), 0 0 0 1px rgba(255,107,43,.15);
+    }
+    .hl-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--orange), rgba(255,107,43,.3), transparent);
+      z-index: 2;
+    }
+    .hl-card::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 100% 50% at 50% 0%, rgba(255,107,43,.08) 0%, transparent 70%);
+      z-index: 1;
+    }
+    .hl-illustration {
+      position: relative; width: 100%; height: 120px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2; flex-shrink: 0;
+    }
+    .hl-illustration svg { width: 100%; height: 100%; }
+    .hl-illustration::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 48px;
+      background: linear-gradient(to bottom, transparent, rgba(10,10,10,.95));
+      pointer-events: none;
+    }
+    .hl-body {
+      position: relative; z-index: 2;
+      padding: 0 1.25rem 1.25rem; display: flex; flex-direction: column; gap: .375rem; flex: 1;
+    }
+    .hl-platform {
+      display: inline-block; align-self: flex-start;
+      background: rgba(255,107,43,.1); border: 1px solid rgba(255,107,43,.25);
+      color: var(--orange); padding: .2rem .65rem; border-radius: 9999px;
+      font-family: var(--font); font-size: .6rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .12em; margin-bottom: .2rem;
+    }
+    .hl-title {
+      font-family: var(--font); font-size: 1rem; font-weight: 700;
+      line-height: 1.25; letter-spacing: -.02em; color: #fff;
+    }
+    .hl-desc {
+      font-family: var(--font); font-size: .8125rem;
+      color: rgba(255,255,255,.45); line-height: 1.65; flex: 1; font-weight: 400;
+    }
+    .hl-role {
+      font-family: var(--font); font-size: .75rem;
+      color: rgba(255,255,255,.28); line-height: 1.5;
+      font-style: italic; font-weight: 400;
+    }
+    .hl-metric {
+      margin-top: .5rem; padding-top: .625rem;
+      border-top: 1px solid rgba(255,255,255,.06);
+      display: flex; flex-direction: column; align-items: flex-start; gap: .25rem;
+    }
+    .hl-metric-value {
+      font-family: 'Rajdhani', var(--font); font-size: 2.25rem; font-weight: 700;
+      color: var(--orange); letter-spacing: .02em; line-height: 1; white-space: nowrap;
+    }
+    .hl-metric-label {
+      font-family: var(--font); font-size: .65rem; font-weight: 500;
+      color: var(--muted); line-height: 1.6;
+      text-transform: uppercase; letter-spacing: .12em;
+    }
+
+    @media (max-width: 1024px) {
+      .highlights-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 767px) {
+      .highlights-grid { grid-template-columns: 1fr; }
+      .hl-illustration { height: 110px; }
+      .hl-title { font-size: .9375rem; }
+      .hl-desc { font-size: .8rem; }
+      .hl-role { font-size: .7rem; }
+      .hl-metric-value { font-size: 1.875rem; }
+      .hl-metric-label { font-size: .62rem; }
+    }
 
     /* ── AI / Skills tags ───────────────────────────────── */
     #skills-section {
@@ -908,9 +982,6 @@
       .exp-bullets li { font-size: .8rem; }
 
       /* Projects */
-      .projects-grid { grid-template-columns: 1fr; }
-      .project-content h3 { font-size: 1rem; }
-      .project-content p { font-size: .75rem; }
 
       /* Skills tags */
       #skills-section { padding: 1.25rem; border-radius: 1.25rem; }
@@ -1233,34 +1304,240 @@
     <section id="highlights" aria-labelledby="highlights-heading">
       <p class="label reveal">Product Highlights</p>
       <h2 id="highlights-heading" class="sr-only">Product Highlights</h2>
-      <div class="projects-grid">
-        <article class="card project-card reveal reveal-delay-1">
-          <img src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=600&auto=format&fit=crop" alt="HBO Max streaming platform" referrerpolicy="no-referrer" loading="lazy" />
-          <div class="project-overlay" aria-hidden="true"></div>
-          <span class="project-tag">HBO Max · 70+ Countries</span>
-          <div class="project-content">
-            <h3>Offline Downloads</h3>
-            <p>7M users downloading 32M+ assets monthly across 70+ countries.</p>
+      <div class="highlights-grid">
+
+        <!-- Card 1: R21 Age Gating -->
+        <article class="hl-card reveal reveal-delay-1">
+          <div class="hl-illustration" aria-hidden="true">
+            <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg">
+              <!-- Background glow -->
+              <radialGradient id="g1" cx="50%" cy="40%" r="55%">
+                <stop offset="0%" stop-color="#FF6B2B" stop-opacity=".18"/>
+                <stop offset="100%" stop-color="#FF6B2B" stop-opacity="0"/>
+              </radialGradient>
+              <rect width="300" height="160" fill="url(#g1)"/>
+              <!-- Shield body -->
+              <path d="M150 20 L190 38 L190 82 C190 108 170 125 150 135 C130 125 110 108 110 82 L110 38 Z"
+                fill="none" stroke="#FF6B2B" stroke-width="2" stroke-opacity=".7"/>
+              <path d="M150 28 L182 43 L182 82 C182 104 165 119 150 128 C135 119 118 104 118 82 L118 43 Z"
+                fill="rgba(255,107,43,.07)"/>
+              <!-- Lock body -->
+              <rect x="138" y="75" width="24" height="18" rx="3"
+                fill="none" stroke="#FF6B2B" stroke-width="1.5" stroke-opacity=".8"/>
+              <!-- Lock shackle -->
+              <path d="M143 75 L143 68 Q150 61 157 68 L157 75"
+                fill="none" stroke="#FF6B2B" stroke-width="1.5" stroke-opacity=".8"/>
+              <!-- Lock keyhole -->
+              <circle cx="150" cy="83" r="2.5" fill="#FF6B2B" fill-opacity=".7"/>
+              <rect x="149" y="84" width="2" height="4" rx="1" fill="#FF6B2B" fill-opacity=".7"/>
+              <!-- R21 text -->
+              <text x="150" y="57" text-anchor="middle" font-family="'Syne', sans-serif" font-size="13"
+                font-weight="800" fill="#FF6B2B" fill-opacity=".95" letter-spacing="3">R21</text>
+              <!-- Decorative rings -->
+              <circle cx="150" cy="80" r="52" fill="none" stroke="#FF6B2B" stroke-opacity=".08" stroke-width="1"/>
+              <circle cx="150" cy="80" r="68" fill="none" stroke="#FF6B2B" stroke-opacity=".05" stroke-width="1"/>
+              <!-- Corner dots -->
+              <circle cx="40" cy="30" r="2" fill="#FF6B2B" fill-opacity=".3"/>
+              <circle cx="260" cy="30" r="2" fill="#FF6B2B" fill-opacity=".3"/>
+              <circle cx="40" cy="130" r="2" fill="#FF6B2B" fill-opacity=".15"/>
+              <circle cx="260" cy="130" r="2" fill="#FF6B2B" fill-opacity=".15"/>
+              <!-- Scan lines -->
+              <line x1="30" y1="50" x2="100" y2="50" stroke="#FF6B2B" stroke-opacity=".1" stroke-width="1"/>
+              <line x1="200" y1="50" x2="270" y2="50" stroke="#FF6B2B" stroke-opacity=".1" stroke-width="1"/>
+              <line x1="30" y1="110" x2="100" y2="110" stroke="#FF6B2B" stroke-opacity=".07" stroke-width="1"/>
+              <line x1="200" y1="110" x2="270" y2="110" stroke="#FF6B2B" stroke-opacity=".07" stroke-width="1"/>
+            </svg>
+          </div>
+          <div class="hl-body">
+            <span class="hl-platform">HBO Max</span>
+            <h3 class="hl-title">R21 Age Gating</h3>
+            <p class="hl-desc">Launched a critical compliance feature enforcing age verification across HBO Max globally.</p>
+            <p class="hl-role">Owned end-to-end delivery — from requirement scoping to on-time launch</p>
+            <div class="hl-metric">
+              <span class="hl-metric-value">1M+</span>
+              <span class="hl-metric-label">monthly user<br>interactions</span>
+            </div>
           </div>
         </article>
-        <article class="card project-card reveal reveal-delay-2">
-          <img src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=600&auto=format&fit=crop" alt="Payment gateway integration" referrerpolicy="no-referrer" loading="lazy" />
-          <div class="project-overlay" aria-hidden="true"></div>
-          <span class="project-tag">Discovery+ · Payments</span>
-          <div class="project-content">
-            <h3>UPI AutoPay & Tokenization</h3>
-            <p>Enabled UPI AutoPay and card tokenization for millions of Indian users.</p>
+
+        <!-- Card 2: Offline Downloads -->
+        <article class="hl-card reveal reveal-delay-2">
+          <div class="hl-illustration" aria-hidden="true">
+            <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg">
+              <radialGradient id="g2" cx="50%" cy="40%" r="55%">
+                <stop offset="0%" stop-color="#FF6B2B" stop-opacity=".16"/>
+                <stop offset="100%" stop-color="#FF6B2B" stop-opacity="0"/>
+              </radialGradient>
+              <rect width="300" height="160" fill="url(#g2)"/>
+              <!-- Globe -->
+              <circle cx="150" cy="75" r="45" fill="none" stroke="#FF6B2B" stroke-opacity=".5" stroke-width="1.5"/>
+              <!-- Latitude lines -->
+              <ellipse cx="150" cy="75" rx="45" ry="18" fill="none" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1"/>
+              <ellipse cx="150" cy="57" rx="38" ry="10" fill="none" stroke="#FF6B2B" stroke-opacity=".15" stroke-width="1"/>
+              <ellipse cx="150" cy="93" rx="38" ry="10" fill="none" stroke="#FF6B2B" stroke-opacity=".15" stroke-width="1"/>
+              <!-- Longitude lines -->
+              <line x1="150" y1="30" x2="150" y2="120" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1"/>
+              <line x1="105" y1="75" x2="195" y2="75" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1"/>
+              <!-- Globe fill -->
+              <circle cx="150" cy="75" r="44" fill="rgba(255,107,43,.04)"/>
+              <!-- Download arrows from globe -->
+              <g stroke="#FF6B2B" stroke-opacity=".75" stroke-width="1.5" fill="none">
+                <line x1="120" y1="55" x2="120" y2="72"/>
+                <polyline points="115,67 120,74 125,67"/>
+                <line x1="150" y1="48" x2="150" y2="65"/>
+                <polyline points="145,60 150,67 155,60"/>
+                <line x1="180" y1="55" x2="180" y2="72"/>
+                <polyline points="175,67 180,74 185,67"/>
+              </g>
+              <!-- Device at bottom -->
+              <rect x="126" y="108" width="48" height="30" rx="4"
+                fill="rgba(255,107,43,.08)" stroke="#FF6B2B" stroke-opacity=".5" stroke-width="1.5"/>
+              <rect x="131" y="112" width="38" height="20" rx="2" fill="rgba(255,107,43,.06)"/>
+              <rect x="143" y="139" width="14" height="3" rx="1.5" fill="#FF6B2B" fill-opacity=".4"/>
+              <!-- Decorative dots -->
+              <circle cx="40" cy="40" r="2.5" fill="#FF6B2B" fill-opacity=".25"/>
+              <circle cx="260" cy="40" r="2.5" fill="#FF6B2B" fill-opacity=".25"/>
+              <circle cx="55" cy="110" r="1.5" fill="#FF6B2B" fill-opacity=".15"/>
+              <circle cx="245" cy="110" r="1.5" fill="#FF6B2B" fill-opacity=".15"/>
+              <!-- Country count -->
+              <text x="150" y="26" text-anchor="middle" font-family="monospace" font-size="9"
+                font-weight="600" fill="#FF6B2B" fill-opacity=".6" letter-spacing="1">70+ COUNTRIES</text>
+            </svg>
+          </div>
+          <div class="hl-body">
+            <span class="hl-platform">HBO Max</span>
+            <h3 class="hl-title">Offline Downloads</h3>
+            <p class="hl-desc">Launched offline downloads across 70+ countries, enabling users to watch content without internet.</p>
+            <p class="hl-role">Owned product roadmap and coordinated cross-functional teams across regions</p>
+            <div class="hl-metric">
+              <span class="hl-metric-value">32M</span>
+              <span class="hl-metric-label">assets downloaded<br>monthly by 7M users</span>
+            </div>
           </div>
         </article>
-        <article class="card project-card reveal reveal-delay-3">
-          <img src="https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?q=80&w=600&auto=format&fit=crop" alt="OTT platform app" referrerpolicy="no-referrer" loading="lazy" />
-          <div class="project-overlay" aria-hidden="true"></div>
-          <span class="project-tag">OTTplay · India</span>
-          <div class="project-content">
-            <h3>OTTplay App</h3>
-            <p>Built and launched with Razorpay & BillDesk gateways; 5% engagement uplift via recommendation engine.</p>
+
+        <!-- Card 3: UPI AutoPay & Tokenization -->
+        <article class="hl-card reveal reveal-delay-3">
+          <div class="hl-illustration" aria-hidden="true">
+            <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg">
+              <radialGradient id="g3" cx="50%" cy="40%" r="55%">
+                <stop offset="0%" stop-color="#FF6B2B" stop-opacity=".16"/>
+                <stop offset="100%" stop-color="#FF6B2B" stop-opacity="0"/>
+              </radialGradient>
+              <rect width="300" height="160" fill="url(#g3)"/>
+              <!-- Card shape -->
+              <rect x="90" y="35" width="120" height="75" rx="8"
+                fill="rgba(255,107,43,.07)" stroke="#FF6B2B" stroke-opacity=".5" stroke-width="1.5"/>
+              <!-- Card chip -->
+              <rect x="103" y="50" width="22" height="17" rx="3"
+                fill="rgba(255,107,43,.15)" stroke="#FF6B2B" stroke-opacity=".6" stroke-width="1"/>
+              <line x1="114" y1="50" x2="114" y2="67" stroke="#FF6B2B" stroke-opacity=".4" stroke-width=".75"/>
+              <line x1="103" y1="58" x2="125" y2="58" stroke="#FF6B2B" stroke-opacity=".4" stroke-width=".75"/>
+              <!-- UPI text on card -->
+              <text x="185" y="58" text-anchor="end" font-family="monospace" font-size="9"
+                font-weight="700" fill="#FF6B2B" fill-opacity=".8" letter-spacing="1">UPI</text>
+              <!-- Card number dots -->
+              <circle cx="110" cy="82" r="2" fill="#FF6B2B" fill-opacity=".5"/>
+              <circle cx="118" cy="82" r="2" fill="#FF6B2B" fill-opacity=".5"/>
+              <circle cx="126" cy="82" r="2" fill="#FF6B2B" fill-opacity=".5"/>
+              <circle cx="134" cy="82" r="2" fill="#FF6B2B" fill-opacity=".5"/>
+              <circle cx="148" cy="82" r="2" fill="#FF6B2B" fill-opacity=".3"/>
+              <circle cx="156" cy="82" r="2" fill="#FF6B2B" fill-opacity=".3"/>
+              <circle cx="164" cy="82" r="2" fill="#FF6B2B" fill-opacity=".3"/>
+              <circle cx="172" cy="82" r="2" fill="#FF6B2B" fill-opacity=".3"/>
+              <!-- Shield/token icon -->
+              <path d="M150 100 L165 107 L165 120 C165 130 158 136 150 140 C142 136 135 130 135 120 L135 107 Z"
+                fill="rgba(255,107,43,.1)" stroke="#FF6B2B" stroke-opacity=".6" stroke-width="1.2"/>
+              <path d="M147 118 L150 121 L156 114" stroke="#FF6B2B" stroke-opacity=".9" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+              <!-- Circuit lines -->
+              <line x1="60" y1="72" x2="90" y2="72" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1"/>
+              <line x1="60" y1="72" x2="60" y2="95" stroke="#FF6B2B" stroke-opacity=".15" stroke-width="1"/>
+              <circle cx="60" cy="95" r="2.5" fill="none" stroke="#FF6B2B" stroke-opacity=".25" stroke-width="1"/>
+              <line x1="210" y1="72" x2="240" y2="72" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1"/>
+              <line x1="240" y1="72" x2="240" y2="95" stroke="#FF6B2B" stroke-opacity=".15" stroke-width="1"/>
+              <circle cx="240" cy="95" r="2.5" fill="none" stroke="#FF6B2B" stroke-opacity=".25" stroke-width="1"/>
+              <!-- Auto-pay signal waves -->
+              <path d="M68 45 Q75 38 82 45" fill="none" stroke="#FF6B2B" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M63 40 Q75 28 87 40" fill="none" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1" stroke-linecap="round"/>
+              <circle cx="75" cy="48" r="2" fill="#FF6B2B" fill-opacity=".4"/>
+            </svg>
+          </div>
+          <div class="hl-body">
+            <span class="hl-platform">Discovery+</span>
+            <h3 class="hl-title">UPI AutoPay & Tokenization</h3>
+            <p class="hl-desc">Enabled UPI AutoPay and card tokenization to improve payment security and reduce fraud.</p>
+            <p class="hl-role">Led payment research, strategy, and feature delivery for the Indian market</p>
+            <div class="hl-metric">
+              <span class="hl-metric-value">Millions</span>
+              <span class="hl-metric-label">of Indian users<br>on secure payments</span>
+            </div>
           </div>
         </article>
+
+        <!-- Card 4: OTTplay Recommendation Engine -->
+        <article class="hl-card reveal reveal-delay-4">
+          <div class="hl-illustration" aria-hidden="true">
+            <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg">
+              <radialGradient id="g4" cx="50%" cy="40%" r="55%">
+                <stop offset="0%" stop-color="#FF6B2B" stop-opacity=".16"/>
+                <stop offset="100%" stop-color="#FF6B2B" stop-opacity="0"/>
+              </radialGradient>
+              <rect width="300" height="160" fill="url(#g4)"/>
+              <!-- Graph baseline -->
+              <line x1="50" y1="125" x2="260" y2="125" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1"/>
+              <line x1="50" y1="125" x2="50" y2="30" stroke="#FF6B2B" stroke-opacity=".2" stroke-width="1"/>
+              <!-- Grid lines -->
+              <line x1="50" y1="100" x2="260" y2="100" stroke="#FF6B2B" stroke-opacity=".07" stroke-width="1" stroke-dasharray="4,4"/>
+              <line x1="50" y1="75" x2="260" y2="75" stroke="#FF6B2B" stroke-opacity=".07" stroke-width="1" stroke-dasharray="4,4"/>
+              <line x1="50" y1="50" x2="260" y2="50" stroke="#FF6B2B" stroke-opacity=".07" stroke-width="1" stroke-dasharray="4,4"/>
+              <!-- Upward curve (engagement uplift) -->
+              <path d="M55 118 C90 115 110 108 140 95 C170 82 200 60 250 35"
+                fill="none" stroke="#FF6B2B" stroke-opacity=".8" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Area fill under curve -->
+              <path d="M55 118 C90 115 110 108 140 95 C170 82 200 60 250 35 L250 125 L55 125 Z"
+                fill="rgba(255,107,43,.07)"/>
+              <!-- Data point nodes (play button style) -->
+              <g fill="rgba(10,10,10,.9)" stroke="#FF6B2B" stroke-opacity=".8" stroke-width="1.5">
+                <circle cx="55" cy="118" r="6"/>
+                <circle cx="110" cy="108" r="6"/>
+                <circle cx="165" cy="88" r="6"/>
+                <circle cx="220" cy="58" r="6"/>
+                <circle cx="250" cy="35" r="8"/>
+              </g>
+              <!-- Play triangles inside nodes -->
+              <g fill="#FF6B2B" fill-opacity=".8">
+                <polygon points="53,116 53,120 57,118"/>
+                <polygon points="108,106 108,110 112,108"/>
+                <polygon points="163,86 163,90 167,88"/>
+                <polygon points="218,56 218,60 222,58"/>
+                <polygon points="247,33 247,37 252,35"/>
+              </g>
+              <!-- 5% uplift label -->
+              <rect x="212" y="20" width="50" height="20" rx="4" fill="rgba(255,107,43,.15)" stroke="#FF6B2B" stroke-opacity=".4" stroke-width="1"/>
+              <text x="237" y="34" text-anchor="middle" font-family="monospace" font-size="10"
+                font-weight="700" fill="#FF6B2B" fill-opacity=".9">+5%</text>
+              <!-- Arrow pointing up at end -->
+              <line x1="250" y1="35" x2="250" y2="18" stroke="#FF6B2B" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3,2"/>
+              <!-- Y-axis labels -->
+              <text x="44" y="128" text-anchor="end" font-family="monospace" font-size="7" fill="#FF6B2B" fill-opacity=".3">0</text>
+              <text x="44" y="78" text-anchor="end" font-family="monospace" font-size="7" fill="#FF6B2B" fill-opacity=".3">50</text>
+              <!-- Decorative side dots -->
+              <circle cx="270" cy="80" r="2" fill="#FF6B2B" fill-opacity=".2"/>
+              <circle cx="275" cy="90" r="1.5" fill="#FF6B2B" fill-opacity=".15"/>
+            </svg>
+          </div>
+          <div class="hl-body">
+            <span class="hl-platform">OTTplay</span>
+            <h3 class="hl-title">Recommendation Engine</h3>
+            <p class="hl-desc">Improved the recommendation engine by adding new ranking rules based on user behaviour data.</p>
+            <p class="hl-role">Analysed user data, defined ranking logic, and drove feature implementation</p>
+            <div class="hl-metric">
+              <span class="hl-metric-value">5%</span>
+              <span class="hl-metric-label">engagement uplift<br>post-launch</span>
+            </div>
+          </div>
+        </article>
+
       </div>
     </section>
 
