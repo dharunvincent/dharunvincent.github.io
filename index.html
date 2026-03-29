@@ -245,8 +245,9 @@
     .reveal {
       opacity: 0; transform: translateY(28px);
       transition: opacity .7s cubic-bezier(.22,1,.36,1), transform .7s cubic-bezier(.22,1,.36,1);
+      pointer-events: none;
     }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
     .reveal-delay-1 { transition-delay: .1s; }
     .reveal-delay-2 { transition-delay: .2s; }
     .reveal-delay-3 { transition-delay: .3s; }
@@ -544,7 +545,7 @@
     main { max-width:72rem; margin:0 auto; padding:3rem 1.5rem 2rem; }
     section { margin-bottom:5.5rem; scroll-margin-top: 5rem; }
     /* Offset anchor targets for fixed navbar */
-    #about, #experience, #highlights, #contact, #skills-section { scroll-margin-top: 5rem; }
+    #about, #ai-builder, #experience, #highlights, #contact, #skills-section { scroll-margin-top: 5rem; }
     #contact { margin-bottom: 0 !important; }
 
     /* ── Marquee ────────────────────────────────────────── */
@@ -573,10 +574,15 @@
       padding:.875rem 1.25rem; border-radius:1rem;
       background:var(--surface); border:1px solid var(--border);
       font-size:.875rem; font-weight:500; color:rgba(255,255,255,.75);
-      transition:border-color .3s,background .3s;
+      transition:border-color .3s, background .3s, transform .2s; gap:.2rem;
+      text-decoration:none; cursor:pointer;
     }
-    .highlight-item:hover { border-color:rgba(255,107,43,.35); background:rgba(255,255,255,.07); }
-    .highlight-arrow { color:var(--orange); }
+    .highlight-item:hover {
+      border-color:rgba(255,107,43,.35); background:rgba(255,255,255,.07);
+      transform: translateX(4px);
+    }
+    .highlight-arrow { color:var(--orange); flex-shrink:0; transition: transform .2s; }
+    .highlight-item:hover .highlight-arrow { transform: translateX(3px); }
 
     /* ── Impact numbers ─────────────────────────────────── */
     .impact-grid {
@@ -978,6 +984,7 @@
       /* About */
       #about h2 { font-size: clamp(1.75rem, 7vw, 2.5rem); }
       #about p:not(.label) { font-size: .875rem; }
+      .highlight-item { font-size: .8rem; padding: .75rem 1rem; }
       .impact-grid { grid-template-columns: 1fr 1fr; gap: .75rem; }
       .impact-value { font-size: 2rem; }
       .impact-label { font-size: .6rem; letter-spacing: .08em; color: rgba(255,255,255,.75); }
@@ -1166,11 +1173,11 @@
           </p>
         </div>
         <div class="about-highlights reveal reveal-delay-2">
-          <div class="highlight-item">Payments & Fintech <span class="highlight-arrow">→</span></div>
-          <div class="highlight-item">OTT / Streaming <span class="highlight-arrow">→</span></div>
-          <div class="highlight-item">Cross-functional Leadership <span class="highlight-arrow">→</span></div>
-          <div class="highlight-item">Data-driven Decisions <span class="highlight-arrow">→</span></div>
-          <div class="highlight-item">Privacy & Security <span class="highlight-arrow">→</span></div>
+          <a href="#ai-builder" class="highlight-item">AI-powered Product Management <span class="highlight-arrow">→</span></a>
+          <a href="#experience" class="highlight-item">Growth & Monetisation <span class="highlight-arrow">→</span></a>
+          <a href="#experience" class="highlight-item">Global Product Delivery <span class="highlight-arrow">→</span></a>
+          <a href="#experience" class="highlight-item">User Behaviour & Analytics <span class="highlight-arrow">→</span></a>
+          <a href="#experience" class="highlight-item">Compliance & Regulatory <span class="highlight-arrow">→</span></a>
         </div>
       </div>
 
