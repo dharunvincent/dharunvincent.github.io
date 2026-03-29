@@ -579,7 +579,6 @@
     }
     .highlight-item:hover {
       border-color:rgba(255,107,43,.35); background:rgba(255,255,255,.07);
-      transform: translateX(4px);
     }
     .highlight-arrow { color:var(--orange); flex-shrink:0; transition: transform .2s; }
     .highlight-item:hover .highlight-arrow { transform: translateX(3px); }
@@ -985,8 +984,7 @@
       #about h2 { font-size: clamp(1.75rem, 7vw, 2.5rem); }
       #about p:not(.label) { font-size: .875rem; }
       .about-grid { gap: 1.75rem; }
-      .highlight-item { font-size: .8rem; padding: .75rem 1rem; transform: none !important; }
-      .highlight-item:hover { transform: none !important; }
+      .highlight-item { font-size: .8rem; padding: .75rem 1rem; }
       .impact-grid { grid-template-columns: 1fr 1fr; gap: .75rem; }
       .impact-value { font-size: 2rem; }
       .impact-label { font-size: .6rem; letter-spacing: .08em; color: rgba(255,255,255,.75); }
@@ -1002,8 +1000,8 @@
       .exp-card { padding: 1.25rem; }
       .exp-company-name { font-size: 1.15rem; }
       .exp-role { font-size: .8rem; }
-      .exp-header { flex-direction: column; align-items: flex-start; gap: .625rem; }
-      .exp-period { font-size: .7rem; padding: .3rem .75rem; white-space: nowrap; align-self: flex-start; }
+      .exp-header { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-start; gap: .5rem; }
+      .exp-period { font-size: .7rem; padding: .3rem .75rem; white-space: nowrap; align-self: flex-start; margin-left: 0; }
       .exp-bullets li { font-size: .8rem; }
 
       /* Projects */
