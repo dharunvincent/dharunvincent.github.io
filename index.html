@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- dharunvincent.com -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -179,15 +178,36 @@
 
     /* ── Mobile hero overrides ────────────────────────────── */
     @media (max-width: 767px) {
-      #hero { align-items: flex-end; min-height: 100svh; height: 100svh; }
+      /* Full screen hero — flex column so content sits at bottom */
+      #hero {
+        min-height: 100svh; height: 100svh;
+        display: flex; flex-direction: column;
+        justify-content: flex-end; align-items: stretch;
+      }
       #hero-photo img { width: 100%; height: 100%; right: 0; object-position: center top; }
+
+      /* Gradient: face visible in top 55%, text readable from 60% down.
+         This is the key fix — darkening starts earlier so text always
+         sits below the chin regardless of phone screen height */
       #hero-photo::after {
         background:
-          linear-gradient(to bottom, rgba(0,0,0,.1) 0%, rgba(0,0,0,.05) 30%,
-          rgba(0,0,0,.55) 60%, rgba(0,0,0,.90) 72%, #000 82%) !important;
+          linear-gradient(to bottom,
+            rgba(0,0,0,.0)  0%,
+            rgba(0,0,0,.0)  45%,
+            rgba(0,0,0,.5)  58%,
+            rgba(0,0,0,.88) 68%,
+            rgba(0,0,0,.97) 76%,
+            #000            84%) !important;
       }
-      /* Reduced bottom padding — pushes content lower so it clears the chin area */
-      #hero-content { padding: 0 1.25rem 2.5rem; }
+
+      /* Content always pinned to bottom — fixed padding so it never
+         overlaps the face on any screen size, small iPhone or large Android */
+      #hero-content {
+        position: relative; z-index: 2;
+        padding: 0 1.25rem 1.5rem;
+        width: 100%;
+      }
+
       #hero h1 { font-size: clamp(1.25rem, 5.5vw, 1.9rem); letter-spacing: .03em; margin-bottom: .3rem; }
       .hero-title-sub { font-size: clamp(.875rem, 4vw, 1.1rem); }
       #hero p.hero-desc { font-size: .8rem; }
