@@ -169,6 +169,9 @@
     const textEl = document.getElementById('contact-email-text');
     if (textEl) textEl.textContent = e;
 
+    const mobEl = document.getElementById('mobile-email-link');
+    if (mobEl) mobEl.href = mailto;
+  })();
 
   /* ── View Experience button — hide on mobile load, reveal on scroll ── */
   // Prevents hero text from overlapping the background photo on small screens.
