@@ -187,25 +187,6 @@
       }
       /* Reduced bottom padding — pushes content lower so it clears the chin area */
       #hero-content { padding: 0 1.25rem 2.5rem; }
-      /* Hide primary CTA on initial mobile load — revealed by JS on scroll */
-      #view-exp-btn {
-        max-height: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        border: none;
-        opacity: 0;
-        overflow: hidden;
-        pointer-events: none;
-        transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
-      }
-      /* JS adds this class when user scrolls > 50px */
-      #view-exp-btn.show-on-scroll {
-        max-height: 60px;
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
-        opacity: 1;
-        pointer-events: auto;
-      }
       #hero h1 { font-size: clamp(1.25rem, 5.5vw, 1.9rem); letter-spacing: .03em; margin-bottom: .3rem; }
       .hero-title-sub { font-size: clamp(.875rem, 4vw, 1.1rem); }
       #hero p.hero-desc { font-size: .8rem; }
