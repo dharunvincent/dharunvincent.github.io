@@ -178,17 +178,23 @@
 
     /* ── Mobile hero overrides ────────────────────────────── */
     @media (max-width: 767px) {
-      /* Full screen hero — flex column so content sits at bottom */
+      /* Hero: full screen, normal flow (not flex-end) so content
+         can extend beyond 100svh naturally into the second screen */
       #hero {
-        min-height: 100svh; height: 100svh;
-        display: flex; flex-direction: column;
-        justify-content: flex-end; align-items: stretch;
+        min-height: 100svh !important;
+        height: auto !important;
+        display: block !important;
+        overflow: visible !important;
+        position: relative;
+      }
+      /* Photo stays fixed to exactly one screen height */
+      #hero-photo {
+        position: fixed !important;
+        height: 100svh;
       }
       #hero-photo img { width: 100%; height: 100%; right: 0; object-position: center top; }
 
-      /* Gradient: face visible in top 55%, text readable from 60% down.
-         This is the key fix — darkening starts earlier so text always
-         sits below the chin regardless of phone screen height */
+      /* Gradient — face visible in top half, dark from 63% down */
       #hero-photo::after {
         background:
           linear-gradient(to bottom,
@@ -200,22 +206,48 @@
             #000            87%) !important;
       }
 
-      /* Content always pinned to bottom — fixed padding so it never
-         overlaps the face on any screen size, small iPhone or large Android */
+      /* #hero-content: wrapper that holds all three sub-components.
+         Positioned to start at top of screen, flows down naturally. */
       #hero-content {
-        position: relative; z-index: 2;
-        padding: 0 1.25rem 1.5rem;
-        width: 100%;
-        /* Spacer pushes the entire content block into the bottom 38% of screen */
-        margin-top: 62svh;
+        position: relative !important;
+        z-index: 2 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
 
+      /* Component 1 — Identity block (badge, name, title).
+         padding-top of 72svh pushes it below the chin on all phones. */
+      #hero-identity {
+        padding: 72svh 1.25rem 0;
+        background: transparent;
+      }
+
+      /* Component 2a — Description + Buttons.
+         Sits directly below identity block, still within first screen. */
+      #hero-action {
+        padding: 0.5rem 1.25rem 0;
+        background: transparent;
+      }
+
+      /* Component 2b — Stats.
+         No special positioning — flows naturally below buttons
+         into the second screen. Background is solid black so it
+         sits cleanly below the photo. */
+      .hero-stats {
+        padding: 1.5rem 1.25rem 2rem !important;
+        background: #000;
+        position: relative;
+        z-index: 3;
+      }
+
+      /* Typography overrides for mobile */
       #hero h1 { font-size: clamp(1.25rem, 5.5vw, 1.9rem); letter-spacing: .03em; margin-bottom: .3rem; }
-      .hero-title-sub { font-size: clamp(.875rem, 4vw, 1.1rem); }
-      #hero p.hero-desc { font-size: .8rem; }
+      .hero-title-sub { font-size: clamp(.875rem, 4vw, 1.1rem); margin-bottom: .75rem; }
+      #hero p.hero-desc { font-size: .8rem; margin-bottom: 1rem; }
       .hero-badge { display:inline-flex; font-size:.55rem; letter-spacing:.12em; padding:.2rem .6rem; margin-bottom:.4rem; }
-      .hero-btns { flex-direction: column; align-items: stretch; gap: .5rem; margin-bottom: .5rem; }
-      .hero-stats { gap:0; justify-content:space-between; padding:.5rem 0 1rem; width:100%; }
+      .hero-btns { flex-direction: column; align-items: stretch; gap: .5rem; margin-bottom: 0; }
+      .hero-stats { gap:0; justify-content:space-between; width:100%; }
       .hero-stat-item { min-width:0; flex:1; padding:0 .25rem; }
       .hero-stat-value { font-size:1.3rem; }
       .hero-stat-label { font-size:.5rem; letter-spacing:.05em; white-space:normal; line-height:1.4; }
@@ -300,24 +332,35 @@
     <div id="hero-radial" aria-hidden="true"></div>
 
     <div id="hero-content">
-      <div class="hero-badge anim-badge">
-        <span class="hero-badge-dot" aria-hidden="true"></span>
-        Scaling Ideas into Global Realities
+      <!-- ── Component 1: Identity block ──────────────────────
+           On mobile: starts at 72svh (below chin).
+           On desktop: part of the single #hero-content flow. -->
+      <div id="hero-identity">
+        <div class="hero-badge anim-badge">
+          <span class="hero-badge-dot" aria-hidden="true"></span>
+          Scaling Ideas into Global Realities
+        </div>
+        <h1 class="anim-h1">Dharun Vincent</h1>
+        <p class="hero-title-sub anim-sub">AI Product Manager</p>
       </div>
 
-      <h1 class="anim-h1">Dharun Vincent</h1>
-      <p class="hero-title-sub anim-sub">AI Product Manager</p>
-
-      <p class="hero-desc anim-desc">
-        7+ years building apps and features from ideation to launch across streaming,
-        entertainment and technology. Delivered products used by millions across 70+ countries.
-      </p>
-
-      <div class="hero-btns anim-btns">
-        <a href="#experience" id="view-exp-btn" class="btn-primary">View Experience</a>
-        <a href="#contact"    class="btn-secondary">Get in Touch</a>
+      <!-- ── Component 2a: Description + Buttons ───────────────
+           On mobile: sits just below identity block, still on first screen.
+           On desktop: part of the single #hero-content flow. -->
+      <div id="hero-action">
+        <p class="hero-desc anim-desc">
+          7+ years building apps and features from ideation to launch across streaming,
+          entertainment and technology. Delivered products used by millions across 70+ countries.
+        </p>
+        <div class="hero-btns anim-btns">
+          <a href="#experience" id="view-exp-btn" class="btn-primary">View Experience</a>
+          <a href="#contact"    class="btn-secondary">Get in Touch</a>
+        </div>
       </div>
 
+      <!-- ── Component 2b: Stats ────────────────────────────────
+           On mobile: flows naturally below buttons into second screen.
+           On desktop: part of the single #hero-content flow. -->
       <div class="hero-stats anim-stats" role="list" aria-label="Key stats">
         <div role="listitem" class="hero-stat-item">
           <div class="hero-stat-value">7+</div>
