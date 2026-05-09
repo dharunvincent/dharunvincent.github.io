@@ -294,39 +294,53 @@
 
     /* ── Mobile responsive — Vibe Coding page ────────────────── */
 
-    /* ── Blurred background photo — Vibe Coding page ─────────── */
-    /* Photo permanently blurred — content-first page, work takes centre stage.
-       Fixed positioning so it stays in place as user scrolls. */
-    #vibe-bg-photo {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      overflow: hidden;
+    /* ── Desktop background — subtle dark radial gradient ───── */
+    /* Matches homepage desktop background for consistency.
+       Replaces the flat #000 with warm charcoal depth. */
+    @media (min-width: 768px) {
+      body {
+        background:
+          radial-gradient(ellipse 80% 80% at 50% 20%,
+            #161616 0%,
+            #0E0E0E 45%,
+            #080808 100%);
+        background-attachment: fixed;
+      }
+      /* Hide blurred photo on desktop — not needed, gradient handles depth */
+      #vibe-bg-photo { display: none; }
     }
-    #vibe-bg-photo img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center top;
-      filter: blur(18px);
-      /* Scale up slightly to hide blur edge artifacts */
-      transform: scale(1.06);
-      transform-origin: center;
+
+    /* ── Blurred background photo — mobile only ─────────────── */
+    /* Photo permanently blurred on mobile — content-first, premium feel.
+       Restricted to mobile as originally planned. Desktop uses gradient above. */
+    @media (max-width: 767px) {
+      #vibe-bg-photo {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        overflow: hidden;
+        display: block;
+      }
+      #vibe-bg-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center top;
+        filter: blur(18px);
+        transform: scale(1.06);
+        transform-origin: center;
+      }
+      #vibe-bg-photo::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.78);
+      }
+      body { background: transparent; }
+      .page-hero,
+      .projects-container { background: transparent; }
+      .project-card { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
     }
-    /* Dark overlay so project cards stay readable over the blurred photo */
-    #vibe-bg-photo::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.78);
-    }
-    /* Make page background transparent so the fixed photo shows through */
-    body { background: transparent; }
-    /* Ensure content sections have transparent backgrounds */
-    .page-hero,
-    .projects-container { background: transparent; }
-    /* Project cards retain their glass-like surface — looks great over blur */
-    .project-card { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
 
     @media (max-width: 767px) {
       /* Bug 2: centre-align all page hero text on mobile */
