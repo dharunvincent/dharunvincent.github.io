@@ -105,7 +105,21 @@
 
   <!-- ── Page-specific hero animation styles ───────────────── -->
   <style>
-    /* Hero entry animations — only needed on this page */
+    /* ── Desktop background — subtle dark radial gradient ───── */
+    /* Replaces flat #000 with a warm charcoal gradient.
+       Desktop only — mobile uses the blurred hero photo as background. */
+    @media (min-width: 768px) {
+      body {
+        background:
+          radial-gradient(ellipse 80% 80% at 50% 20%,
+            #161616 0%,
+            #0E0E0E 45%,
+            #080808 100%);
+        background-attachment: fixed;
+      }
+    }
+
+    /* ── Hero entry animations — only needed on this page ───── */
     .anim-badge  { opacity:0; animation: fadeUp .6s ease .3s  forwards; }
     .anim-h1     { opacity:0; animation: fadeUp .9s cubic-bezier(.22,1,.36,1) .4s forwards; }
     .anim-sub    { opacity:0; animation: fadeUp .8s ease .55s forwards; }
