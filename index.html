@@ -193,11 +193,11 @@
         background:
           linear-gradient(to bottom,
             rgba(0,0,0,.0)  0%,
-            rgba(0,0,0,.0)  45%,
-            rgba(0,0,0,.5)  58%,
-            rgba(0,0,0,.88) 68%,
-            rgba(0,0,0,.97) 76%,
-            #000            84%) !important;
+            rgba(0,0,0,.0)  50%,
+            rgba(0,0,0,.55) 63%,
+            rgba(0,0,0,.90) 72%,
+            rgba(0,0,0,.97) 79%,
+            #000            87%) !important;
       }
 
       /* Content always pinned to bottom — fixed padding so it never
@@ -206,6 +206,8 @@
         position: relative; z-index: 2;
         padding: 0 1.25rem 1.5rem;
         width: 100%;
+        /* Spacer pushes the entire content block into the bottom 38% of screen */
+        margin-top: 62svh;
       }
 
       #hero h1 { font-size: clamp(1.25rem, 5.5vw, 1.9rem); letter-spacing: .03em; margin-bottom: .3rem; }
