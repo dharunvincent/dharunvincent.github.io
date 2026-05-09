@@ -201,8 +201,8 @@
       <a href="../vibe-coding/" onclick="closeMobileNav()">
         <span class="nav-num">01</span>Vibe Coding
       </a>
-      <a href="../blogs/" onclick="closeMobileNav()">
-        <span class="nav-num">02</span>My Blogs
+      <a href="../#experience" onclick="closeMobileNav()">
+        <span class="nav-num">02</span>My Experience
       </a>
     </div>
     <div class="mobile-nav-divider"></div>
@@ -222,20 +222,24 @@
       <div class="nav-links" role="list">
         <a href="../vibe-coding/" role="listitem">Vibe Coding</a>
         <!-- My Blogs is active on this page -->
-        <a href="../blogs/"       role="listitem" class="active">My Blogs</a>
+        <a href="../blogs/"       role="listitem" class="active">Blogs</a>
         <a href="../#contact"     role="listitem">Contact</a>
       </div>
-      <button class="hamburger" id="hamburger"
-        aria-label="Open navigation menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      <!-- Mobile: Home CTA visible outside hamburger + Hamburger -->
+      <div class="mobile-nav-right">
+        <a href="../" class="mobile-nav-cta">Home</a>
+        <button class="hamburger" id="hamburger"
+          aria-label="Open navigation menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </nav>
 
   <!-- ── Coming Soon Content ────────────────────────────────── -->
   <main class="coming-soon-wrap" id="main-content">
 
-    <p class="coming-soon-label">My Blogs</p>
+    <p class="coming-soon-label">Blogs</p>
 
     <div class="coming-soon-icon" aria-hidden="true">
       <!-- Pencil / writing icon -->
