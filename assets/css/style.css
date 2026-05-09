@@ -2,7 +2,6 @@
    dharunvincent.com — Shared Stylesheet
    All pages import this file for design consistency.
    Design tokens (CSS variables) are defined in :root.
-   Last updated: 2026-05-09
    ============================================================ */
 
 /* ── Cursor: hide native on mouse devices ────────────────── */
@@ -484,8 +483,8 @@ footer p {
 .hl-body { position: relative; z-index: 2; padding: 0 1.25rem 1.25rem; display: flex; flex-direction: column; gap: .375rem; flex: 1; }
 .hl-platform { display: inline-block; align-self: flex-start; background: rgba(255,107,43,.1); border: 1px solid rgba(255,107,43,.25); color: var(--orange); padding: .2rem .65rem; border-radius: 9999px; font-family: var(--font); font-size: .6rem; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; margin-bottom: .2rem; }
 .hl-title { font-family: var(--font); font-size: 1rem; font-weight: 700; line-height: 1.25; letter-spacing: -.02em; color: #fff; }
-.hl-desc { font-family: var(--font); font-size: .8125rem; color: rgba(255,255,255,.45); line-height: 1.65; flex: 1; font-weight: 400; }
-.hl-role { font-family: var(--font); font-size: .75rem; color: rgba(255,255,255,.28); line-height: 1.5; font-style: italic; font-weight: 400; }
+.hl-desc { font-family: var(--font); font-size: .8125rem; color: rgba(255,255,255,.65); line-height: 1.65; flex: 1; font-weight: 400; }
+.hl-role { font-family: var(--font); font-size: .75rem; color: rgba(255,255,255,.55); line-height: 1.5; font-style: italic; font-weight: 400; }
 .hl-metric { margin-top: .5rem; padding-top: .625rem; border-top: 1px solid rgba(255,255,255,.06); display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
 .hl-metric-value { font-family: 'Rajdhani', var(--font); font-size: 2.25rem; font-weight: 700; color: var(--orange); letter-spacing: .02em; line-height: 1; white-space: nowrap; }
 .hl-metric-label { font-family: var(--font); font-size: .65rem; font-weight: 500; color: var(--muted); line-height: 1.6; text-transform: uppercase; letter-spacing: .12em; }
