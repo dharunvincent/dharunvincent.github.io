@@ -173,4 +173,58 @@
     if (mobEl) mobEl.href = mailto;
   })();
 
+  /* ── Hero photo: progressive blur on scroll ───────────────── */
+  // Mobile only. As user scrolls down the first screen, the hero
+  // photo blurs and darkens progressively — creating a cinematic
+  // transition from the personal intro into the content below.
+  // Uses requestAnimationFrame for smooth 60fps performance.
+  (function () {
+    const photo = document.getElementById('hero-photo');
+    // Only run on homepage (photo element exists) and mobile screens
+    if (!photo || window.innerWidth > 767) return;
+
+    // Create a JS-controlled overlay div for the darkening effect
+    // (separate from the CSS ::after overlay which handles the gradient)
+    const blurOverlay = document.createElement('div');
+    blurOverlay.id = 'hero-blur-overlay';
+    blurOverlay.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'z-index:1',
+      'background:rgba(0,0,0,0)',
+      'pointer-events:none',
+      'transition:none', // we control this via JS for smoothness
+    ].join(';');
+    photo.appendChild(blurOverlay);
+
+    let ticking = false;
+
+    function applyBlur() {
+      const scrollY   = window.scrollY;
+      const screenH   = window.innerHeight;
+      // Progress: 0 at top, 1 when user has scrolled one full screen
+      const progress  = Math.min(scrollY / screenH, 1);
+
+      // Blur: 0px → 14px
+      const blurPx    = Math.round(progress * 14 * 10) / 10;
+      // Overlay darkness: 0 → 0.65 opacity
+      const overlayOp = Math.round(progress * 0.65 * 100) / 100;
+
+      photo.style.filter        = `blur(${blurPx}px)`;
+      blurOverlay.style.background = `rgba(0,0,0,${overlayOp})`;
+
+      ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(applyBlur);
+        ticking = true;
+      }
+    }, { passive: true });
+
+    // Run once on load in case page is already scrolled (e.g. refresh mid-page)
+    applyBlur();
+  })();
+
 })();
