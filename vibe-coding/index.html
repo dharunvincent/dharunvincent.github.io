@@ -446,11 +446,11 @@
   <!-- ── Mobile nav ─────────────────────────────────────────── -->
   <nav id="mobile-nav" aria-label="Mobile navigation">
     <div class="mobile-nav-links">
-      <a href="../vibe-coding/" onclick="closeMobileNav()">
-        <span class="nav-num">01</span>Vibe Coding
+      <a href="../" onclick="closeMobileNav()">
+        <span class="nav-num">01</span>Home
       </a>
-      <a href="../blogs/" onclick="closeMobileNav()">
-        <span class="nav-num">02</span>My Blogs
+      <a href="../#experience" onclick="closeMobileNav()">
+        <span class="nav-num">02</span>My Experience
       </a>
     </div>
     <div class="mobile-nav-divider"></div>
@@ -470,13 +470,17 @@
       <div class="nav-links" role="list">
         <!-- Active state applied via CSS class since this is the Vibe Coding page -->
         <a href="../vibe-coding/" role="listitem" class="active">Vibe Coding</a>
-        <a href="../blogs/"       role="listitem">My Blogs</a>
+        <a href="../blogs/"       role="listitem">Blogs</a>
         <a href="../#contact"     role="listitem">Contact</a>
       </div>
-      <button class="hamburger" id="hamburger"
-        aria-label="Open navigation menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      <!-- Mobile: Blogs CTA visible outside hamburger + Hamburger -->
+      <div class="mobile-nav-right">
+        <a href="../blogs/" class="mobile-nav-cta">Blogs</a>
+        <button class="hamburger" id="hamburger"
+          aria-label="Open navigation menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </nav>
 
