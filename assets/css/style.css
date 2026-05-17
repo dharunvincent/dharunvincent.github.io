@@ -946,10 +946,6 @@ footer p {
   border-top: 1px solid rgba(0,0,0,.1);
 }
 
-.blog-post-category {
-  margin-bottom: .5rem;
-}
-
 .blog-post-footer {
   padding-top: 2rem;
   border-top: 1px solid rgba(0,0,0,.08);
@@ -986,6 +982,28 @@ footer p {
 
 .blog-share-linkedin { color: #0077B5; border-color: rgba(0,119,181,.25); background: rgba(0,119,181,.06); }
 
+/* Back to Home pill — blog pages */
+.blog-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem 1rem;
+  min-height: 44px;
+  border-radius: 9999px;
+  border: 1px solid rgba(26,26,26,0.14);
+  background: rgba(26,26,26,0.07);
+  color: rgba(26,26,26,0.7);
+  font-family: var(--mono);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  text-decoration: none;
+  margin-bottom: 2rem;
+  transition: border-color .2s, color .2s;
+}
+.blog-back-home svg { width: .875rem; height: .875rem; stroke: currentColor; flex-shrink: 0; }
+.blog-back-home:hover { border-color: rgba(232,93,26,.4); color: #1A1A1A; }
+
 /* ── Blog responsive ─────────────────────────────────────── */
 @media (max-width: 767px) {
   .blog-index-main { padding: 7rem 1rem 4rem; }
@@ -1000,4 +1018,5 @@ footer p {
 
 @media (max-width: 400px) {
   .blog-index-main { padding: 6rem .75rem 3rem; }
+  .blog-back-home { width: 100%; justify-content: center; }
 }
