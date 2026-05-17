@@ -75,11 +75,12 @@ async function fetchPosts() {
 // ── Extract page properties ───────────────────────────────────
 function extract(page) {
   const p       = page.properties;
-  const title   = getText(p.Title?.title || []);
-  const slug    = getText(p.Slug?.rich_text || []) || slugify(title);
-  const dateStr = p['Published Date']?.date?.start || null;
-  const tags    = (p.Tags?.multi_select || []).map(t => t.name);
-  const excerpt = getText(p.Excerpt?.rich_text || []);
+  const title    = getText(p.Title?.title || []);
+  const slug     = getText(p.Slug?.rich_text || []) || slugify(title);
+  const dateStr  = p['Published Date']?.date?.start || null;
+  const tags     = (p.Tags?.multi_select || []).map(t => t.name);
+  const excerpt  = getText(p.Excerpt?.rich_text || []);
+  const category = p.Category?.select?.name || null;
   const coverProp = p['Cover Image'];
   const cover   =
     coverProp?.url ||
@@ -88,7 +89,7 @@ function extract(page) {
     page.cover?.external?.url ||
     page.cover?.file?.url ||
     null;
-  return { id: page.id, title, slug, dateStr, tags, excerpt, cover };
+  return { id: page.id, title, slug, dateStr, tags, excerpt, cover, category };
 }
 
 // ── Blog card HTML ────────────────────────────────────────────
@@ -116,8 +117,10 @@ function buildCard(post, rt) {
 
 // ── Individual post page HTML ─────────────────────────────────
 function buildPostPage(post, content, rt) {
-  const { title, slug, dateStr, tags, excerpt, cover } = post;
-  const tagHtml   = tags.map(t => `<span class="blog-post-tag">${esc(t)}</span>`).join('');
+  const { title, slug, dateStr, tags, excerpt, cover, category } = post;
+  const tagHtml      = tags.map(t => `<span class="blog-post-tag">${esc(t)}</span>`).join('');
+  const categoryHtml = category ? `<span class="blog-post-tag">${esc(category)}</span>` : '';
+  const linkedInUrl  = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://dharunvincent.com/blogs/posts/' + slug + '/')}`;
   const coverHtml = cover
     ? `<div class="blog-post-cover-wrap"><img src="${esc(cover)}" alt="${esc(title)}" class="blog-post-cover" loading="lazy" /></div>`
     : '';
@@ -139,9 +142,14 @@ function buildPostPage(post, content, rt) {
   <meta property="og:site_name" content="Dharun Vincent" />
   <meta property="og:image" content="${cover ? esc(cover) : 'https://dharunvincent.com/og-image.png'}" />
   ${dateStr ? `<meta property="article:published_time" content="${esc(dateStr)}" />` : ''}
+  <meta property="article:author" content="Dharun Vincent R" />
   <meta http-equiv="X-Frame-Options" content="DENY" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAMAEBAAAAAAIACPAQAANgAAACAgAAAAACAArwMAAMUBAAAwMAAAAAAgAHAGAAB0BQAAiVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR4nKWSzS5DQRzFz/nfUZr2im8SGhZiZSvhAfBi4h1seAFbG28gsbMlUYkI9dnS9va2cyxuK5XeW8RJJvOR+Z8585shAOEfsrRFAuIvjQcMLIlEAQz+YsBu7wGskNUJstbpW8+S6xUrmbS2zSoNKNom/ZX4cej9FIBcZoLeXaeAxn5g5UepvQYUCIy/AvFeYDdFoJmVxNA9fYasXwraN8utks0jr8675CuC5oi6kqQDYF3f2J9LxWuIIah1oH0ilT6Iu46yUXxBHAV8AQhOvcISES+4oEXnXiaMUWnEveXIFlKYEsmbIwQaO2YPM0S9LOXd2GhnIwyfl8PibK1aqx9UnuYvpGkD5PuMXI9BFcgfe7+0ZayceU2ORbF/aL+6xWYjXo9iRlLqp+vVD7QuMG0ab3fN7g1oM33fd7L9EQ3JxxqmAYO0DRxi9KPBT8oE81t9AnhfkdeVzpIAAAAAAElFTkSuQmCCiVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADdklEQVR4nO2Wy2vcVRTHP+fc3/wmk+dkkrRS8rBKLWhxJfj6A6qCuBIEVz5AcGHBhQsRN4IgiJQuaheKKEVREcSCuhBbiq6qixIktJo4RDtpJnGSyTSZPOZ3jotMaFonZjIGSqUHDvy4v3vP+d7veV0BnBsoeiOd3wJw8wFQcNnlpG0KgNadGoiDCLBbQIR/N+QBJFn/XnxEZGoJ5Kz7PiCj66C8bmd3AQSg7nj1bpGZI0FLq3isiBbdV4+adZedfUDYtLcl8eu1Tm+SgeIrqhc+icL5R0UmgRIw+mMIhUIqTD+vOhYjJcCkgZ1m9B8M1BeWHxQmn1W18070rll/Asl9IvMnVLv2CnLMvCzg+0Vqx83iUfchgZS3EI7NaIx1oxfnUtHM66qjwFRW5PcPVX9djXT2sxB+G1HJA4vApfdCGJuIQrFPJL/ZRrMaNUI0ImKfms+vCKmTQSsPIb1F3A8nXjrtNgC0PSwy+6Lqwjl3xCkPgf6106uzRRkKWB7XtxLrzrmkB1X6TyF/nnZvz8Hym6r551RL75hlj5rlSkJNxFuqhIYMAMQOCt0TwuSXZr9MO+mvorBSheRbc30tSUYMegKUYyj7thW9QwAGZhC/YTaQhcoF9+EhCfm8u31gdrB+2Gt1r3JVfSeJuCWAGrgC0+79C0IUw9yEe20KqhmRYnAPi9AnIh5FkkgNdxzfYXu/BsAGibG796pGBmsKqadFC/cHSXIq2RW3+IWOztIXLqsfV66A2WVVjZZ8rXJXOjVWXku6ps0Gm2XiGrQbERyDnkPC0lOiUwYLc6Bfm1d/cLezTnLK/cpM0JUHBvomztx7qO2ezs7eZ4YH/ftcruuwsLRxmWakUeY4YLeJzL6kMpsGgiAnDf3J7A5g7bFcz/jj6Vjbq8sd2T17bH93T8eJ4sx876WC/2EWfeR+QNdzaNtwNNogAuGy+95XEzv4udM+IBIv4HGAWKFjrrqSOSAS3l6sVp+4OF47VyoVjxcKbeOWpDpFrMnLb8nABjL39fELUBLocEjXD1VdZB6RTAavvJ/tXPumUl1+0kkfM+M7szubZWDb4pX19ip+3Uat/zPVsTNtcUyt1vZyzao/m91enwlNSzM9u1F/31irDquMRzDN1Una+jT8L7LTJgS79CjdCEcro3hXGWhFbq5n+S0A/0sAfwPfCcG4pqOUjgAAAABJRU5ErkJggg==" />
+  <link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,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" />
+  <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload"
@@ -164,7 +172,7 @@ function buildPostPage(post, content, rt) {
     body::before { opacity: .2; }
     ::-webkit-scrollbar-track { background: #F5F4EE; }
     ::-webkit-scrollbar-thumb { background: var(--orange); }
-    .nav-inner.scrolled { background: rgba(245,244,238,0.82) !important; border-color: rgba(0,0,0,0.12) !important; }
+    .nav-inner.scrolled { background: rgba(245,244,238,0.82) !important; border-color: rgba(0,0,0,0.12) !important; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 32px -8px rgba(0,0,0,0.12) !important; }
     .nav-inner { background: rgba(245,244,238,0.82); border: 1px solid rgba(0,0,0,0.10); }
     .nav-logo { color: #1A1A1A; }
     .nav-links a { color: rgba(26,26,26,0.55); }
@@ -184,6 +192,10 @@ function buildPostPage(post, content, rt) {
       y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window,document,"clarity","script","wagqxp6f56");
   </script>
+  <script
+    src="https://js-de.sentry-cdn.com/5b394f979db79d4cb00a23172707d721.min.js"
+    crossorigin="anonymous"
+  ></script>
 </head>
 <body>
   <div id="cursor-dot"  aria-hidden="true"></div>
@@ -238,6 +250,7 @@ function buildPostPage(post, content, rt) {
             <span>${rt} min read</span>
           </div>
           <h1 class="blog-post-title" itemprop="headline">${esc(title)}</h1>
+          ${categoryHtml ? `<div class="blog-post-category">${categoryHtml}</div>` : ''}
           ${tagHtml ? `<div class="blog-post-tags" aria-label="Tags">${tagHtml}</div>` : ''}
         </header>
 
@@ -249,6 +262,16 @@ ${content}
       </article>
 
       <div class="blog-post-footer">
+        <div class="blog-post-share">
+          <a href="${linkedInUrl}" target="_blank" rel="noopener noreferrer" class="blog-share-btn blog-share-linkedin" aria-label="Share on LinkedIn">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            Share on LinkedIn
+          </a>
+          <button class="blog-share-btn blog-share-copy" onclick="(function(btn){navigator.clipboard.writeText(window.location.href).then(function(){var t=btn.textContent;btn.textContent='Copied!';setTimeout(function(){btn.textContent=t;},2000);});})(this)" aria-label="Copy link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy link
+          </button>
+        </div>
         <a href="/blogs/" class="blog-back-link">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M19 12H5M12 5l-7 7 7 7"/>

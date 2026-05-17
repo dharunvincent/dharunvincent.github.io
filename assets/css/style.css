@@ -946,10 +946,45 @@ footer p {
   border-top: 1px solid rgba(0,0,0,.1);
 }
 
+.blog-post-category {
+  margin-bottom: .5rem;
+}
+
 .blog-post-footer {
   padding-top: 2rem;
   border-top: 1px solid rgba(0,0,0,.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
+
+.blog-post-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  align-items: center;
+}
+
+.blog-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem 1rem;
+  border-radius: 6px;
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .2s;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(0,0,0,.04);
+  color: inherit;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.blog-share-btn:hover { opacity: .7; }
+
+.blog-share-linkedin { color: #0077B5; border-color: rgba(0,119,181,.25); background: rgba(0,119,181,.06); }
 
 /* ── Blog responsive ─────────────────────────────────────── */
 @media (max-width: 767px) {
