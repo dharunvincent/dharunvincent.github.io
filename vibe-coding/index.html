@@ -108,14 +108,13 @@
       color: var(--muted); max-width: 42rem; line-height: 1.8;
     }
 
-    /* ── Back link ───────────────────────────────────────────── */
-    .back-link {
-      display: inline-flex; align-items: center; gap: .4rem;
-      font-size: .8rem; color: var(--muted); margin-bottom: 2rem;
-      transition: color .2s;
+    /* ── Back to Home pill — dark theme overrides ───────────── */
+    .blog-back-home {
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.6);
     }
-    .back-link:hover { color: var(--orange); }
-    .back-link svg { width: .85rem; height: .85rem; stroke: currentColor; }
+    .blog-back-home:hover { border-color: rgba(255,107,43,.4); color: #fff; }
 
     /* ── Projects container ───────────────────────────────────── */
     .projects-container {
@@ -344,11 +343,11 @@
 
     @media (max-width: 767px) {
       /* Bug 2: centre-align all page hero text on mobile */
-      .page-hero { padding: 6rem 1.25rem 2.5rem; text-align: center; }
-      .page-hero-label { justify-content: center; }
-      .page-hero h1 { font-size: clamp(1.5rem, 6vw, 2.2rem); }
-      .page-hero-desc { margin: 0 auto; text-align: center; }
-      .back-link { display: inline-flex; }
+      .page-hero { padding: 6rem 1.25rem 2.5rem; text-align: center; overflow: hidden; max-width: 100%; }
+      .page-hero-label { justify-content: center; max-width: 100%; overflow: hidden; }
+      .page-hero h1 { font-size: clamp(1.5rem, 6vw, 2.2rem); overflow-wrap: break-word; word-break: break-word; max-width: 100%; }
+      .page-hero-desc { margin: 0 auto; text-align: center; overflow-wrap: break-word; }
+      .blog-back-home { display: inline-flex; }
 
       .projects-container { padding: 0 1rem 4rem; gap: 2.5rem; }
 
@@ -407,6 +406,8 @@
       .outcome-grid { grid-template-columns: 1fr; }
       .tool-badge { font-size: .7rem; padding: .35rem .75rem; }
       .project-name { font-size: 1rem; }
+      .page-hero { overflow: hidden; max-width: 100%; }
+      .page-hero h1, .page-hero-label { max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
     }
   </style>
 
@@ -486,8 +487,8 @@
 
   <!-- ── Page Hero ──────────────────────────────────────────── -->
   <div class="page-hero">
-    <a href="../" class="back-link" aria-label="Back to home">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <a href="../" class="blog-back-home" aria-label="Back to home">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
       </svg>
       Back to Home
