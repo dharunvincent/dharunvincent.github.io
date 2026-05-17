@@ -656,6 +656,16 @@ footer p {
 
   /* Footer */
   footer p { font-size: .55rem; letter-spacing: .2em; }
+
+  /* ── Mobile overflow containment ─────────────────────────── */
+  html, body { overflow-x: hidden; max-width: 100%; }
+  h1, h2, h3, h4 {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+  p, li { overflow-wrap: break-word; }
+  img, video, iframe, embed { max-width: 100%; }
 }
 
 /* ================================================================
@@ -665,6 +675,8 @@ footer p {
   .impact-grid { grid-template-columns: 1fr 1fr; }
   main { padding: 1.5rem .75rem 1rem; }
   .ai-tool { min-width: 4.75rem; font-size: .58rem; }
+  html, body { overflow-x: hidden; max-width: 100%; }
+  h1, h2, h3, h4 { overflow-wrap: break-word; word-break: break-word; max-width: 100%; }
 }
 
 /* ================================================================
