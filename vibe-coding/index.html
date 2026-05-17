@@ -108,6 +108,10 @@
       color: var(--muted); max-width: 42rem; line-height: 1.8;
     }
 
+    /* ── Above-the-fold hero — always visible, never reveal ─── */
+    .page-hero h1,
+    .page-hero .page-hero-desc { opacity: 1; transform: none; }
+
     /* ── Back to Home pill — dark theme overrides ───────────── */
     .blog-back-home {
       border-color: rgba(255,255,255,0.12);
@@ -494,8 +498,8 @@
       Back to Home
     </a>
     <p class="page-hero-label">Product Building &amp; Vibe Coding</p>
-    <h1 class="reveal">Building Real Products<br>with AI</h1>
-    <p class="page-hero-desc reveal reveal-delay-1">
+    <h1>Building Real Products<br>with AI</h1>
+    <p class="page-hero-desc">
       I build real, working products using AI as my primary tool — no traditional coding required.
       Here's a look at what I've built, how I built it, and what each one proves is possible
       for a product manager who thinks like a builder.
