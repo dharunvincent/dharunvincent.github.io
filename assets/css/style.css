@@ -671,7 +671,7 @@ footer p {
    BLOG — Card grid (blogs/index.html)
    ================================================================ */
 .blog-index-main {
-  max-width: 60rem;
+  max-width: 72rem;
   margin: 0 auto;
   padding: 8rem 1.5rem 5rem;
 }

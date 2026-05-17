@@ -94,15 +94,17 @@ function extract(page) {
 
 // ── Blog card HTML ────────────────────────────────────────────
 function buildCard(post, rt) {
-  const { title, slug, dateStr, tags, excerpt } = post;
+  const { title, slug, dateStr, tags, excerpt, category } = post;
+  const categoryHtml = category ? `<span class="blog-tag">${esc(category)}</span>` : '';
   const tagHtml = tags
     .map(t => `<span class="blog-tag">${esc(t)}</span>`)
     .join('');
+  const allTagsHtml = categoryHtml + tagHtml;
 
   return `<article class="blog-card card reveal">
   <a href="/blogs/posts/${esc(slug)}/" class="blog-card-link" aria-label="Read: ${esc(title)}">
     <div class="blog-card-top">
-      ${tagHtml ? `<div class="blog-card-tags">${tagHtml}</div>` : ''}
+      ${allTagsHtml ? `<div class="blog-card-tags">${allTagsHtml}</div>` : ''}
       <h2 class="blog-card-title">${esc(title)}</h2>
       ${excerpt ? `<p class="blog-card-excerpt">${esc(excerpt)}</p>` : ''}
     </div>
