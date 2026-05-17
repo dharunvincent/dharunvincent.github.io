@@ -60,7 +60,7 @@ async function fetchPosts() {
   do {
     const res = await notion.databases.query({
       database_id: DB_ID,
-      filter: { property: 'Published', checkbox: { equals: true } },
+      filter: { property: 'Published Date', checkbox: { equals: true } },
       sorts:  [{ property: 'Date', direction: 'descending' }],
       start_cursor: cursor,
       page_size: 100
