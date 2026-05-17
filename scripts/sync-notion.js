@@ -72,6 +72,25 @@ async function fetchPosts() {
   return pages;
 }
 
+// ── Fetch all archived posts ──────────────────────────────────
+async function fetchArchivedPosts() {
+  const pages = [];
+  let cursor;
+
+  do {
+    const res = await notion.databases.query({
+      database_id: DB_ID,
+      filter: { property: 'Status', select: { equals: 'Archived' } },
+      start_cursor: cursor,
+      page_size: 100
+    });
+    pages.push(...res.results);
+    cursor = res.has_more ? res.next_cursor : null;
+  } while (cursor);
+
+  return pages;
+}
+
 // ── Extract page properties ───────────────────────────────────
 function extract(page) {
   const p       = page.properties;
@@ -314,6 +333,18 @@ async function main() {
     fs.writeFileSync(path.join(postDir, 'index.html'), buildPostPage(post, html, rt), 'utf8');
 
     cards.push(buildCard(post, rt));
+  }
+
+  // Remove archived posts
+  const archivedPages = await fetchArchivedPosts();
+  for (const page of archivedPages) {
+    const post = extract(page);
+    if (!post.slug) continue;
+    const postFile = path.join(POSTS, post.slug, 'index.html');
+    if (fs.existsSync(postFile)) {
+      fs.rmSync(postFile);
+      console.log(`Removed archived post: ${post.slug}`);
+    }
   }
 
   // Inject cards into the blog index between markers
