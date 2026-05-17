@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="This is my first test blog post to verify the system works end to end." />
+  <meta name="author" content="Dharun Vincent R" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://dharunvincent.com/blogs/posts/first-post/" />
+  <title>First Post – Dharun Vincent</title>
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="First Post" />
+  <meta property="og:description" content="This is my first test blog post to verify the system works end to end." />
+  <meta property="og:url" content="https://dharunvincent.com/blogs/posts/first-post/" />
+  <meta property="og:site_name" content="Dharun Vincent" />
+  <meta property="og:image" content="https://dharunvincent.com/og-image.png" />
+  <meta property="article:published_time" content="2026-05-17" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap"
+    as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  </noscript>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <style>
+    :root {
+      --orange:      #E85D1A;
+      --orange-dim:  rgba(232,93,26,0.10);
+      --orange-glow: rgba(232,93,26,0.30);
+      --surface:     rgba(0,0,0,0.05);
+      --border:      rgba(0,0,0,0.10);
+      --muted:       rgba(26,26,26,0.55);
+    }
+    html, body { background: #F5F4EE; color: #1A1A1A; }
+    body::before { opacity: .2; }
+    ::-webkit-scrollbar-track { background: #F5F4EE; }
+    ::-webkit-scrollbar-thumb { background: var(--orange); }
+    .nav-inner.scrolled { background: rgba(245,244,238,0.82) !important; border-color: rgba(0,0,0,0.12) !important; }
+    .nav-inner { background: rgba(245,244,238,0.82); border: 1px solid rgba(0,0,0,0.10); }
+    .nav-logo { color: #1A1A1A; }
+    .nav-links a { color: rgba(26,26,26,0.55); }
+    .nav-links a:hover, .nav-links a.active { color: #1A1A1A; background: rgba(0,0,0,0.06); }
+    .hamburger { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); }
+    .hamburger span { background: rgba(26,26,26,0.8); }
+    #mobile-nav { background: rgba(245,244,238,0.92); border-color: rgba(0,0,0,0.12); }
+    .mobile-nav-links a { color: rgba(26,26,26,0.7); }
+    .mobile-nav-links a:hover { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1A1A1A; }
+    footer { border-top-color: rgba(0,0,0,0.08); }
+    footer p { color: rgba(26,26,26,0.3); }
+  </style>
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window,document,"clarity","script","wagqxp6f56");
+  </script>
+</head>
+<body>
+  <div id="cursor-dot"  aria-hidden="true"></div>
+  <div id="cursor-ring" aria-hidden="true"></div>
+  <div id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+
+  <nav id="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav-links">
+      <a href="/vibe-coding/" onclick="closeMobileNav()"><span class="nav-num">01</span>Vibe Coding</a>
+      <a href="/#experience"  onclick="closeMobileNav()"><span class="nav-num">02</span>My Experience</a>
+    </div>
+    <div class="mobile-nav-divider"></div>
+    <div class="mobile-nav-footer">
+      <a href="/#contact" onclick="closeMobileNav()">Get in Touch</a>
+    </div>
+  </nav>
+
+  <nav id="navbar" aria-label="Main navigation">
+    <div class="nav-inner" id="nav-inner">
+      <a href="/" class="nav-logo" aria-label="Dharun Vincent – home">Dharun Vincent</a>
+      <div class="nav-links" role="list">
+        <a href="/vibe-coding/" role="listitem">Vibe Coding</a>
+        <a href="/blogs/"       role="listitem" class="active">Blogs</a>
+        <a href="/#contact"     role="listitem">Contact</a>
+      </div>
+      <div class="mobile-nav-right">
+        <a href="/" class="mobile-nav-cta">Home</a>
+        <button class="hamburger" id="hamburger" aria-label="Open navigation menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="blog-post-main" id="main-content">
+    <div class="blog-post-container">
+      <a href="/blogs/" class="blog-back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Back to Blog
+      </a>
+
+      <article class="blog-post" itemscope itemtype="https://schema.org/BlogPosting">
+        <header class="blog-post-header">
+          <div class="blog-post-meta">
+            <time datetime="2026-05-17" itemprop="datePublished">May 17, 2026</time><span aria-hidden="true">·</span>
+            <span>1 min read</span>
+          </div>
+          <h1 class="blog-post-title" itemprop="headline">First Post</h1>
+          <div class="blog-post-tags" aria-label="Tags"><span class="blog-post-tag">Claude</span></div>
+        </header>
+
+        
+
+        <div class="blog-post-content" itemprop="articleBody">
+<p>This is a very proud moment for me that I’m in this stage of product development without even knowing how to write a single line of code</p>
+
+        </div>
+      </article>
+
+      <div class="blog-post-footer">
+        <a href="/blogs/" class="blog-back-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          Back to Blog
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; <span id="year"></span> Dharun Vincent R · All Rights Reserved</p>
+  </footer>
+
+  <script src="/assets/js/main.js"></script>
+</body>
+</html>
