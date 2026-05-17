@@ -61,7 +61,7 @@ async function fetchPosts() {
     const res = await notion.databases.query({
       database_id: DB_ID,
       filter: { property: 'Published Date', checkbox: { equals: true } },
-      sorts:  [{ property: 'Date', direction: 'descending' }],
+      sorts:  [{ property: 'Published Date', direction: 'descending' }],
       start_cursor: cursor,
       page_size: 100
     });
@@ -75,12 +75,19 @@ async function fetchPosts() {
 // ── Extract page properties ───────────────────────────────────
 function extract(page) {
   const p       = page.properties;
-  const title   = getText(p.Title?.title || p.Name?.title || []);
+  const title   = getText(p.Title?.title || []);
   const slug    = getText(p.Slug?.rich_text || []) || slugify(title);
-  const dateStr = p.Date?.date?.start || null;
+  const dateStr = p['Published Date']?.date?.start || null;
   const tags    = (p.Tags?.multi_select || []).map(t => t.name);
-  const excerpt = getText(p.Excerpt?.rich_text || p.Description?.rich_text || []);
-  const cover   = page.cover?.external?.url || page.cover?.file?.url || null;
+  const excerpt = getText(p.Excerpt?.rich_text || []);
+  const coverProp = p['Cover Image'];
+  const cover   =
+    coverProp?.url ||
+    coverProp?.files?.[0]?.external?.url ||
+    coverProp?.files?.[0]?.file?.url ||
+    page.cover?.external?.url ||
+    page.cover?.file?.url ||
+    null;
   return { id: page.id, title, slug, dateStr, tags, excerpt, cover };
 }
 
