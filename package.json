@@ -1,0 +1,17 @@
+{
+  "name": "dharunvincent-website",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Dharun Vincent's personal website",
+  "scripts": {
+    "sync-blog": "node scripts/sync-notion.js"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "marked": "^9.1.6",
+    "notion-to-md": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
