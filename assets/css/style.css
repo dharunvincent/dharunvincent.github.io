@@ -1055,7 +1055,7 @@ footer p {
 
 .timeline-spine {
   position: absolute;
-  left: .5rem; top: .4rem; bottom: .4rem;
+  left: .5rem; top: .4rem; bottom: 0;
   width: 2px;
   background: linear-gradient(to bottom, var(--orange), rgba(255,107,43,.35) 70%, rgba(255,107,43,.08));
 }
@@ -1113,6 +1113,8 @@ footer p {
 }
 .timeline-substop .exp-bullets { gap: .5rem; }
 .timeline-substop .exp-bullets li { font-size: .85rem; }
+
+.timeline-wrap { overflow: visible; }
 
 @media (max-width: 767px) {
   .timeline-wrap { padding-left: 2rem; }
