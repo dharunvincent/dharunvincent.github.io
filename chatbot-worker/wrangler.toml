@@ -1,0 +1,23 @@
+name = "dv-chatbot"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "portfolio-rag"
+
+[[kv_namespaces]]
+binding = "CHAT_KV"
+id = "REPLACE_AFTER_wrangler_kv_namespace_create_CHAT_KV"
+
+[vars]
+ALLOWED_ORIGINS = "https://dharunvincent.com,https://www.dharunvincent.com,http://localhost:8788,http://localhost:3000"
+PUBLIC_EMAIL = "dharun@dharunvincent.com"
+
+[rules]
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
