@@ -92,10 +92,11 @@
       '<div class="dvbot-status" hidden></div>' +
       '<div class="dvbot-messages" aria-live="polite"></div>' +
       '<div class="dvbot-typing" hidden><span></span><span></span><span></span></div>' +
-      '<form class="dvbot-input-row">' +
+      '<form class="dvbot-input-row" autocomplete="off">' +
       '<input type="text" class="dvbot-input" placeholder="Type a message…" maxlength="' +
       MAX_MESSAGE_CHARS +
-      '" aria-label="Message" autocomplete="off" />' +
+      '" aria-label="Message" autocomplete="off" autocorrect="off" autocapitalize="sentences" ' +
+      'spellcheck="true" inputmode="text" data-lpignore="true" data-1p-ignore data-form-type="other" />' +
       '<button type="submit" class="dvbot-send" aria-label="Send">' +
       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">' +
       '<path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -322,17 +323,29 @@
   // viewport that position:fixed is anchored to), so without this the
   // sheet stays pinned to the bottom of the now-offscreen layout viewport
   // and the keyboard covers the latest message. Re-anchor to the visible
-  // viewport instead, keeping the same ~8% top-gap proportions.
+  // viewport instead. When the keyboard is (likely) open, drop the
+  // decorative 8%-top-gap entirely and fill the full visual viewport so
+  // the input sits snug above the keyboard with no gap either side —
+  // the gap is only for the closed-keyboard "bottom sheet" look.
   function updateMobileViewportSize() {
     if (!state.isOpen || !isMobileViewport()) {
       overlay.style.top = "";
+      overlay.style.bottom = "";
       overlay.style.height = "";
       return;
     }
     const vv = window.visualViewport;
     if (!vv) return;
-    const topGap = Math.round(vv.height * 0.08);
-    overlay.style.top = `${Math.round(vv.offsetTop) + topGap}px`;
+
+    const keyboardLikelyOpen = vv.height < window.innerHeight * 0.85;
+    const topGap = keyboardLikelyOpen ? 0 : Math.round(vv.height * 0.08);
+
+    // Set both top+height AND explicitly clear `bottom` (rather than
+    // relying on the CSS media query's bottom:0 losing an over-constrained
+    // tug-of-war) so there's no ambiguity about which edge wins across
+    // browser engines.
+    overlay.style.bottom = "auto";
+    overlay.style.top = `${Math.round(vv.offsetTop + topGap)}px`;
     overlay.style.height = `${Math.round(vv.height - topGap)}px`;
     scrollMessagesToBottom();
   }
@@ -346,9 +359,15 @@
   inputEl.addEventListener("focus", () => {
     markActivity();
     scrollMessagesToBottom();
-    // Keyboard animates in over the next couple hundred ms on most mobile
-    // browsers — nudge again once it (and any visualViewport resize) settles.
-    setTimeout(scrollMessagesToBottom, 350);
+    // Keyboard animates in over the next several hundred ms on most mobile
+    // browsers — re-run the viewport fit and re-scroll a few times as it
+    // settles rather than guessing one delay that won't fit every device.
+    [50, 150, 300, 500, 800].forEach((ms) =>
+      setTimeout(() => {
+        updateMobileViewportSize();
+        scrollMessagesToBottom();
+      }, ms)
+    );
   });
 
   function openPanel() {
@@ -373,6 +392,7 @@
     state.isOpen = false;
     overlay.hidden = true;
     overlay.style.top = "";
+    overlay.style.bottom = "";
     overlay.style.height = "";
     launcher.setAttribute("aria-expanded", "false");
     lockBodyScroll(false);

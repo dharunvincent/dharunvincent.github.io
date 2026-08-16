@@ -294,7 +294,11 @@
   padding: 9px 14px;
   color: var(--dvbot-text);
   font-family: var(--dvbot-font);
-  font-size: 0.85rem;
+  /* Must be a computed >=16px or WebKit auto-zooms the page on focus
+     (and Chrome-on-iOS inherits this since it runs on WebKit too). Use an
+     absolute px value, not rem, so it can never be pulled under 16px by a
+     host-page root font-size change. */
+  font-size: 16px;
   outline: none;
 }
 .dvbot-input:focus-visible {
