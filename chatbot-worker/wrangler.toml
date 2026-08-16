@@ -11,7 +11,7 @@ index_name = "portfolio-rag"
 
 [[kv_namespaces]]
 binding = "CHAT_KV"
-id = "REPLACE_AFTER_wrangler_kv_namespace_create_CHAT_KV"
+id = "15c0683f1e494d9d90c24ac85e8ebfab"
 
 [vars]
 ALLOWED_ORIGINS = "https://dharunvincent.com,https://www.dharunvincent.com,http://localhost:8788,http://localhost:3000"
