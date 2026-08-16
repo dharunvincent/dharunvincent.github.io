@@ -15,7 +15,7 @@ binding = "CHAT_KV"
 id = "15c0683f1e494d9d90c24ac85e8ebfab"
 
 [vars]
-ALLOWED_ORIGINS = "https://dharunvincent.com,https://www.dharunvincent.com,http://localhost:8788,http://localhost:3000"
+ALLOWED_ORIGINS = "https://dharunvincent.com,https://www.dharunvincent.com,http://localhost:8788,http://localhost:3000,https://deploy-preview-14--dharunwebsite.netlify.app"
 PUBLIC_EMAIL = "dharun@dharunvincent.com"
 
 [[rules]]
