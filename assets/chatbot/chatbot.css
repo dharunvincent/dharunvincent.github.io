@@ -20,6 +20,19 @@
   box-sizing: border-box;
 }
 
+/* Author-stylesheet `display` declarations beat the browser's built-in
+   `[hidden] { display: none }` rule regardless of selector specificity
+   (UA origin always loses to author origin for normal declarations), so
+   .dvbot-panel/.dvbot-typing/.dvbot-status setting `display` unconditionally
+   below would otherwise render even while JS sets their `hidden` attribute.
+   This rule restores real hide/show behavior; !important guarantees it wins
+   even though it's declared before the more specific display rules. */
+.dvbot-panel[hidden],
+.dvbot-typing[hidden],
+.dvbot-status[hidden] {
+  display: none !important;
+}
+
 /* ── Launcher ─────────────────────────────────────────── */
 .dvbot-launcher {
   position: fixed;
@@ -35,6 +48,8 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  pointer-events: auto;
+  isolation: isolate;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 0 0 var(--dvbot-orange-glow);
   z-index: 999998;
   font-family: var(--dvbot-font);
@@ -93,6 +108,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  pointer-events: auto;
+  isolation: isolate;
   z-index: 999999;
   font-family: var(--dvbot-font);
   color: var(--dvbot-text);
