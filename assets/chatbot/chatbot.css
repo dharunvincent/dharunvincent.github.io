@@ -14,6 +14,11 @@
   --dvbot-muted: rgba(255, 255, 255, 0.5);
   --dvbot-font: var(--font, 'Syne', system-ui, sans-serif);
   box-sizing: border-box;
+  /* Scoped to the widget itself (not :root/site-wide) so it doesn't affect
+     the blog pages' light-mode theme — only tells the OS this specific
+     control is dark, so iOS renders its keyboard/accessory bar to match
+     our always-dark widget regardless of the host page's own theme. */
+  color-scheme: dark;
 }
 .dvbot-launcher *,
 .dvbot-panel * {

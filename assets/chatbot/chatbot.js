@@ -93,9 +93,9 @@
       '<div class="dvbot-messages" aria-live="polite"></div>' +
       '<div class="dvbot-typing" hidden><span></span><span></span><span></span></div>' +
       '<form class="dvbot-input-row" autocomplete="off">' +
-      '<input type="text" class="dvbot-input" placeholder="Type a message…" maxlength="' +
+      '<input type="text" class="dvbot-input" name="dvbot-chat-msg" id="dvbot-chat-msg" placeholder="Type a message…" maxlength="' +
       MAX_MESSAGE_CHARS +
-      '" aria-label="Message" autocomplete="off" autocorrect="off" autocapitalize="sentences" ' +
+      '" aria-label="Message" autocomplete="off" autocorrect="on" autocapitalize="sentences" ' +
       'spellcheck="true" inputmode="text" data-lpignore="true" data-1p-ignore data-form-type="other" />' +
       '<button type="submit" class="dvbot-send" aria-label="Send">' +
       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">' +
@@ -319,14 +319,28 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
+  // The layout viewport's height (captured once, before any keyboard has
+  // ever opened) is a stable baseline for "is a keyboard covering part of
+  // the screen right now" — comparing against a *live* window.innerHeight
+  // read is less reliable, since that can also shift for reasons unrelated
+  // to the keyboard (e.g. the browser's own chrome collapsing on scroll).
+  const initialInnerHeight = window.innerHeight;
+
+  // Whether the on-screen keyboard is expected to be open. Driven primarily
+  // by focus/blur on the input — the one deterministic, immediate signal
+  // every mobile browser gives us — rather than only inferring it from
+  // visualViewport height, which lags behind the real state while the
+  // keyboard animates in/out and was the source of missed/flaky gap fixes.
+  let keyboardOpen = false;
+
   // On-screen keyboards shrink window.visualViewport (not the layout
   // viewport that position:fixed is anchored to), so without this the
   // sheet stays pinned to the bottom of the now-offscreen layout viewport
   // and the keyboard covers the latest message. Re-anchor to the visible
-  // viewport instead. When the keyboard is (likely) open, drop the
-  // decorative 8%-top-gap entirely and fill the full visual viewport so
-  // the input sits snug above the keyboard with no gap either side —
-  // the gap is only for the closed-keyboard "bottom sheet" look.
+  // viewport instead. While the keyboard is open, the sheet fills the
+  // ENTIRE visible viewport (no gap) so the input sits snug above the
+  // keyboard with nothing showing behind it; the decorative 8% top gap is
+  // only for the closed-keyboard "bottom sheet" look.
   function updateMobileViewportSize() {
     if (!state.isOpen || !isMobileViewport()) {
       overlay.style.top = "";
@@ -337,8 +351,8 @@
     const vv = window.visualViewport;
     if (!vv) return;
 
-    const keyboardLikelyOpen = vv.height < window.innerHeight * 0.85;
-    const topGap = keyboardLikelyOpen ? 0 : Math.round(vv.height * 0.08);
+    const fillFull = keyboardOpen || vv.height < initialInnerHeight * 0.85;
+    const topGap = fillFull ? 0 : Math.round(vv.height * 0.08);
 
     // Set both top+height AND explicitly clear `bottom` (rather than
     // relying on the CSS media query's bottom:0 losing an over-constrained
@@ -356,18 +370,55 @@
   }
   window.addEventListener("resize", updateMobileViewportSize);
 
-  inputEl.addEventListener("focus", () => {
-    markActivity();
-    scrollMessagesToBottom();
-    // Keyboard animates in over the next several hundred ms on most mobile
-    // browsers — re-run the viewport fit and re-scroll a few times as it
-    // settles rather than guessing one delay that won't fit every device.
-    [50, 150, 300, 500, 800].forEach((ms) =>
+  function settleViewportAfterKeyboardChange() {
+    // The keyboard animates in/out over the next several hundred ms on
+    // most mobile browsers — re-run the fit and re-scroll a few times as
+    // it settles rather than guessing a single delay that won't fit every
+    // device/browser combination.
+    [0, 50, 150, 300, 500, 800].forEach((ms) =>
       setTimeout(() => {
         updateMobileViewportSize();
         scrollMessagesToBottom();
       }, ms)
     );
+  }
+
+  inputEl.addEventListener("focus", () => {
+    keyboardOpen = true;
+    markActivity();
+    settleViewportAfterKeyboardChange();
+  });
+
+  inputEl.addEventListener("blur", () => {
+    keyboardOpen = false;
+    settleViewportAfterKeyboardChange();
+  });
+
+  // Native-app-style keyboard dismissal: swiping down or tapping anywhere
+  // in the message list (not just the close/✕ button) blurs the input,
+  // same as iMessage/WhatsApp/Intercom-style widgets.
+  let touchStartY = null;
+  messagesEl.addEventListener(
+    "touchstart",
+    (e) => {
+      touchStartY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
+  messagesEl.addEventListener(
+    "touchmove",
+    (e) => {
+      if (touchStartY === null || !keyboardOpen) return;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (dy > 30) {
+        inputEl.blur();
+        touchStartY = null;
+      }
+    },
+    { passive: true }
+  );
+  messagesEl.addEventListener("click", () => {
+    if (keyboardOpen) inputEl.blur();
   });
 
   function openPanel() {
@@ -390,6 +441,7 @@
 
   function closePanel() {
     state.isOpen = false;
+    keyboardOpen = false;
     overlay.hidden = true;
     overlay.style.top = "";
     overlay.style.bottom = "";
