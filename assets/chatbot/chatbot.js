@@ -87,7 +87,11 @@
     overlay.innerHTML =
       '<div class="dvbot-header">' +
       '<span class="dvbot-header-title">Dharun’s AI Sidekick</span>' +
-      '<button type="button" class="dvbot-close" aria-label="Close chat">✕</button>' +
+      '<button type="button" class="dvbot-close" aria-label="Close chat">' +
+      '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">' +
+      '<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>" +
+      "</button>" +
       "</div>" +
       '<div class="dvbot-status" hidden></div>' +
       '<div class="dvbot-messages" aria-live="polite"></div>' +
@@ -370,28 +374,36 @@
   }
   window.addEventListener("resize", updateMobileViewportSize);
 
-  function settleViewportAfterKeyboardChange() {
-    // The keyboard animates in/out over the next several hundred ms on
-    // most mobile browsers — re-run the fit and re-scroll a few times as
-    // it settles rather than guessing a single delay that won't fit every
-    // device/browser combination.
-    [0, 50, 150, 300, 500, 800].forEach((ms) =>
-      setTimeout(() => {
-        updateMobileViewportSize();
+  // The keyboard animates in/out over an unpredictable span (varies by
+  // device, keyboard app, and Android vs iOS) — rather than guessing fixed
+  // millisecond delays and risking a stale height if the animation runs
+  // longer, re-run the fit on every single animation frame for a bounded
+  // window. Wasteful cheap work beats a visible gap.
+  let viewportSyncRafId = null;
+  function runViewportSyncLoop(durationMs) {
+    if (viewportSyncRafId !== null) cancelAnimationFrame(viewportSyncRafId);
+    const start = performance.now();
+    const tick = (now) => {
+      updateMobileViewportSize();
+      if (now - start < durationMs) {
+        viewportSyncRafId = requestAnimationFrame(tick);
+      } else {
+        viewportSyncRafId = null;
         scrollMessagesToBottom();
-      }, ms)
-    );
+      }
+    };
+    viewportSyncRafId = requestAnimationFrame(tick);
   }
 
   inputEl.addEventListener("focus", () => {
     keyboardOpen = true;
     markActivity();
-    settleViewportAfterKeyboardChange();
+    runViewportSyncLoop(1200);
   });
 
   inputEl.addEventListener("blur", () => {
     keyboardOpen = false;
-    settleViewportAfterKeyboardChange();
+    runViewportSyncLoop(1200);
   });
 
   // Native-app-style keyboard dismissal: swiping down or tapping anywhere
@@ -442,6 +454,10 @@
   function closePanel() {
     state.isOpen = false;
     keyboardOpen = false;
+    if (viewportSyncRafId !== null) {
+      cancelAnimationFrame(viewportSyncRafId);
+      viewportSyncRafId = null;
+    }
     overlay.hidden = true;
     overlay.style.top = "";
     overlay.style.bottom = "";

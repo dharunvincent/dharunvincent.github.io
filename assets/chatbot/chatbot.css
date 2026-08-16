@@ -25,6 +25,22 @@
   box-sizing: border-box;
 }
 
+/* Native OS/browser button chrome can apply its own internal rendering
+   scale independent of the CSS layout box (this is what caused the close
+   button to measure a different painted size than its declared width/
+   height — and almost certainly the real reason it looked a different
+   size on iOS vs Android before, since native button styling differs by
+   platform). appearance:none removes that native styling from every
+   custom button so our explicit CSS sizing is what actually renders,
+   identically across browsers/platforms. */
+.dvbot-launcher,
+.dvbot-close,
+.dvbot-send,
+.dvbot-quick-reply {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 /* Author-stylesheet `display` declarations beat the browser's built-in
    `[hidden] { display: none }` rule regardless of selector specificity
    (UA origin always loses to author origin for normal declarations), so
@@ -136,7 +152,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 8px 8px 8px 16px;
   border-bottom: 1px solid var(--dvbot-border);
   background: var(--dvbot-surface-2);
 }
@@ -147,13 +163,27 @@
 }
 
 .dvbot-close {
+  /* Fixed px size (not a text glyph) so it renders identically on iOS and
+     Android — "✕" as text picks different fallback-font glyph metrics per
+     platform, which is why it looked smaller on iPhone. A 44x44 box also
+     meets the minimum recommended touch target size regardless of the
+     20px icon drawn inside it. */
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--dvbot-muted);
-  font-size: 1rem;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 0;
+  margin: 0;
   border-radius: 8px;
+}
+.dvbot-close svg {
+  display: block;
 }
 .dvbot-close:hover,
 .dvbot-close:focus-visible {
