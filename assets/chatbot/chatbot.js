@@ -1,9 +1,7 @@
 (function () {
   "use strict";
 
-  // Filled in for real after `wrangler deploy` (Phase 1 step 15).
-  // http://127.0.0.1:8787 is wrangler dev's default local port.
-  const WORKER_URL = "http://127.0.0.1:8787";
+  const WORKER_URL = "https://dv-chatbot.dharunvincent.workers.dev";
 
   const SESSION_KEY = "dvbot_session_id";
   const TRANSCRIPT_KEY = "dvbot_transcript";
