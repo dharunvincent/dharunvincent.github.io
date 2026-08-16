@@ -10,7 +10,7 @@
     "reindex": "node scripts/reindex.js"
   },
   "devDependencies": {
-    "wrangler": "^3.90.0"
+    "wrangler": "^4.123.0"
   },
   "engines": {
     "node": ">=18"

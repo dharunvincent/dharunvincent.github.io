@@ -17,7 +17,6 @@ id = "REPLACE_AFTER_wrangler_kv_namespace_create_CHAT_KV"
 ALLOWED_ORIGINS = "https://dharunvincent.com,https://www.dharunvincent.com,http://localhost:8788,http://localhost:3000"
 PUBLIC_EMAIL = "dharun@dharunvincent.com"
 
-[rules]
 [[rules]]
 type = "Text"
 globs = ["**/*.md"]
