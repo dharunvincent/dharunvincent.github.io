@@ -302,6 +302,9 @@ ${content}
   </footer>
 
   <script src="/assets/js/main.js"></script>
+
+  <link rel="stylesheet" href="/assets/chatbot/chatbot.css">
+  <script src="/assets/chatbot/chatbot.js" defer></script>
 </body>
 </html>`;
 }
