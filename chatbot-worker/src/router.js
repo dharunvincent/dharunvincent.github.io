@@ -1,10 +1,12 @@
+// "should i" was deliberately dropped: it's a substring of the spec's own
+// section 9 GENERAL acceptance test ("What should I do to become a Product
+// Manager?"), so keeping it made that test always misroute to ADVICE.
 const ADVICE_KEYWORDS = [
   "help me",
   "advice",
   "relationship",
   "career",
   "life",
-  "should i",
   "virtue",
   "struggling",
   "confused about my",
