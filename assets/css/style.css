@@ -81,6 +81,11 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none; z-index: 1000001;
   opacity: 0; /* shown only after first mousemove */
   transform: translate(-50%, -50%);
+  /* Dark halo so the orange dot doesn't visually disappear against
+     same-color surfaces (e.g. the chatbot launcher's orange background,
+     or any other orange button/CTA on the site) — z-index alone can't fix
+     a same-color-on-same-color visibility problem. */
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,0.55);
   transition: opacity .3s, width .2s, height .2s;
   will-change: transform;
 }
@@ -92,6 +97,8 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none; z-index: 1000000;
   opacity: 0;
   transform: translate(-50%, -50%);
+  /* Same reasoning as #cursor-dot's box-shadow above. */
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
   transition: opacity .3s, width .25s cubic-bezier(.22,1,.36,1),
               height .25s cubic-bezier(.22,1,.36,1), border-color .25s;
   will-change: transform;
