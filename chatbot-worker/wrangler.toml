@@ -8,6 +8,7 @@ binding = "AI"
 [[vectorize]]
 binding = "VECTORIZE"
 index_name = "portfolio-rag"
+remote = true
 
 [[kv_namespaces]]
 binding = "CHAT_KV"
@@ -20,3 +21,4 @@ PUBLIC_EMAIL = "dharun@dharunvincent.com"
 [[rules]]
 type = "Text"
 globs = ["**/*.md"]
+fallthrough = true
