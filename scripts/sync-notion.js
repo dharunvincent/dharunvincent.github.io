@@ -205,8 +205,8 @@ function buildPostPage(post, content, rt) {
     .mobile-nav-links a:hover { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1A1A1A; }
     footer { border-top-color: rgba(0,0,0,0.08); }
     footer p { color: rgba(26,26,26,0.3); }
-    #cursor-dot  { z-index: 9999; pointer-events: none; }
-    #cursor-ring { z-index: 9998; pointer-events: none; }
+    #cursor-dot  { z-index: 1000001; pointer-events: none; }
+    #cursor-ring { z-index: 1000000; pointer-events: none; }
   </style>
   <script type="text/javascript">
     (function(c,l,a,r,i,t,y){

@@ -284,13 +284,68 @@
     }
   }
 
+  let savedScrollY = 0;
+
+  // overflow:hidden alone doesn't reliably stop iOS Safari from scrolling
+  // the page behind a fixed sheet, so pin body in place with position:fixed
+  // (restoring the exact scroll offset on unlock) — the CSS
+  // body.dvbot-scroll-lock rule is a harmless belt-and-braces fallback.
   function lockBodyScroll(lock) {
-    document.body.classList.toggle("dvbot-scroll-lock", lock);
+    if (lock) {
+      savedScrollY = window.scrollY || window.pageYOffset || 0;
+      document.body.classList.add("dvbot-scroll-lock");
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${savedScrollY}px`;
+      document.body.style.width = "100%";
+    } else {
+      document.body.classList.remove("dvbot-scroll-lock");
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      window.scrollTo(0, savedScrollY);
+    }
   }
 
   function isMobileViewport() {
     return window.matchMedia("(max-width: 767px)").matches;
   }
+
+  function scrollMessagesToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  // On-screen keyboards shrink window.visualViewport (not the layout
+  // viewport that position:fixed is anchored to), so without this the
+  // sheet stays pinned to the bottom of the now-offscreen layout viewport
+  // and the keyboard covers the latest message. Re-anchor to the visible
+  // viewport instead, keeping the same ~8% top-gap proportions.
+  function updateMobileViewportSize() {
+    if (!state.isOpen || !isMobileViewport()) {
+      overlay.style.top = "";
+      overlay.style.height = "";
+      return;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const topGap = Math.round(vv.height * 0.08);
+    overlay.style.top = `${Math.round(vv.offsetTop) + topGap}px`;
+    overlay.style.height = `${Math.round(vv.height - topGap)}px`;
+    scrollMessagesToBottom();
+  }
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updateMobileViewportSize);
+    window.visualViewport.addEventListener("scroll", updateMobileViewportSize);
+  }
+  window.addEventListener("resize", updateMobileViewportSize);
+
+  inputEl.addEventListener("focus", () => {
+    markActivity();
+    scrollMessagesToBottom();
+    // Keyboard animates in over the next couple hundred ms on most mobile
+    // browsers — nudge again once it (and any visualViewport resize) settles.
+    setTimeout(scrollMessagesToBottom, 350);
+  });
 
   function openPanel() {
     state.isOpen = true;
@@ -304,14 +359,17 @@
     }
 
     if (isMobileViewport()) lockBodyScroll(true);
+    updateMobileViewportSize();
     startPolling();
     closeEl.focus();
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollMessagesToBottom();
   }
 
   function closePanel() {
     state.isOpen = false;
     overlay.hidden = true;
+    overlay.style.top = "";
+    overlay.style.height = "";
     launcher.setAttribute("aria-expanded", "false");
     lockBodyScroll(false);
     stopPolling();

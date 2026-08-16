@@ -166,6 +166,7 @@
 .dvbot-messages {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -279,6 +280,7 @@
 
 .dvbot-input-row {
   display: flex;
+  flex-shrink: 0;
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--dvbot-border);
@@ -319,12 +321,18 @@
 }
 
 .dvbot-footer {
-  padding: 6px 16px 10px;
-  font-size: 0.68rem;
+  flex-shrink: 0;
+  padding: 4px 18px 12px;
+  font-size: 11px;
+  line-height: 1.35;
   color: var(--dvbot-muted);
   text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
+/* Belt-and-braces alongside the JS position:fixed lock in chatbot.js —
+   harmless on its own, and a fallback if that JS ever fails to run. */
 body.dvbot-scroll-lock {
   overflow: hidden;
 }
@@ -339,6 +347,14 @@ body.dvbot-scroll-lock {
     width: 100%;
     height: auto;
     border-radius: 20px 20px 0 0;
+  }
+
+  /* Better first-paint guess than vh before JS's visualViewport handler
+     takes over precisely (see updateMobileViewportSize in chatbot.js). */
+  @supports (height: 100dvh) {
+    .dvbot-panel {
+      inset: 8dvh 0 0 0;
+    }
   }
 
   .dvbot-launcher {
