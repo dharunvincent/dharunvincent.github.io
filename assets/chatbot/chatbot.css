@@ -150,6 +150,7 @@
 
 .dvbot-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   padding: 8px 8px 8px 16px;
@@ -192,14 +193,26 @@
 }
 
 .dvbot-status {
+  flex-shrink: 0;
   padding: 6px 16px;
   font-size: 0.78rem;
   color: var(--dvbot-orange);
   border-bottom: 1px solid var(--dvbot-border);
 }
 
+/* Layout contract for .dvbot-panel's flex column: header/status/typing/
+   input-row/footer are all flex-shrink:0 (fixed height, never compressed);
+   .dvbot-messages is the only flexible item (flex:1 1 auto) and MUST have
+   min-height:0 — a flex item's default min-height is `auto`, which means
+   "never shrink below your content's intrinsic height". Without this, a
+   long message thread refuses to shrink when the panel itself shrinks
+   (e.g. JS resizing it to visualViewport.height for the on-screen
+   keyboard), consuming all the space and pushing the input bar below the
+   panel's clipped (overflow:hidden) bounds — which is exactly what made
+   the input bar disappear when the keyboard opened. */
 .dvbot-messages {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 14px 16px;
@@ -282,6 +295,7 @@
 
 .dvbot-typing {
   display: flex;
+  flex-shrink: 0;
   gap: 4px;
   padding: 0 16px 8px;
 }
