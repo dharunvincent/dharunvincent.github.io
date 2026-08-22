@@ -13,7 +13,7 @@
   const FALLBACK_REPLY =
     "I'm napping right now 😴 — try again in a bit, or reach Dharun through the contact section!";
   const GREETING =
-    "Hey there! 👋 I'm Dharun's AI sidekick — ask me anything about his work, skills, or projects. And psst… if you type **help me**, I can even share some life advice straight from Dharun's own experiences. 😉";
+    "Hey there! 👋 I'm Dharun's AI sidekick — ask me anything about his work, skills, or projects.";
 
   function getOrCreateSessionId() {
     let id = sessionStorage.getItem(SESSION_KEY);
