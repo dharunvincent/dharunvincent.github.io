@@ -37,7 +37,7 @@ async function postMessage(env, threadTs, text) {
 }
 
 async function startSlackThread(env, sessionId, firstMessage) {
-  const posted = await postMessage(env, null, `🆕 New chat — session ${sessionId}\n*Visitor:* ${firstMessage}`);
+  const posted = await postMessage(env, null, `🆕 New chat — session ${sessionId}\n🧑 *Visitor:* ${firstMessage}`);
   if (!posted) return null;
 
   const threadTs = posted.ts;
@@ -53,8 +53,8 @@ async function startSlackThread(env, sessionId, firstMessage) {
 }
 
 async function postSlackTurn(env, threadTs, visitorMessage, botReply, mode) {
-  await postMessage(env, threadTs, `*Visitor:* ${visitorMessage}`);
-  await postMessage(env, threadTs, `*Bot* (${mode}): ${markdownToSlack(botReply)}`);
+  await postMessage(env, threadTs, `🧑 Visitor: ${visitorMessage}`);
+  await postMessage(env, threadTs, `🤖 Bot (${mode}): ${markdownToSlack(botReply)}`);
 }
 
 // Best-effort, one-way session logging (Phase 2). Never throws — callers run
@@ -67,7 +67,7 @@ export async function logChatToSlack(env, { sessionId, sessionMeta, visitorMessa
       if (!threadTs) return;
       // Parent message already carries the visitor's first question — only
       // the bot's reply to it still needs to land in the thread.
-      await postMessage(env, threadTs, `*Bot* (${mode}): ${markdownToSlack(botReply)}`);
+      await postMessage(env, threadTs, `🤖 Bot (${mode}): ${markdownToSlack(botReply)}`);
       return;
     }
     await postSlackTurn(env, sessionMeta.threadTs, visitorMessage, botReply, mode);
