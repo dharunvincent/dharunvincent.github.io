@@ -575,6 +575,21 @@ This pattern was used all through Phase 1 — keep it:
   timer throttling.
 - PR #17 updated with this fix and the handoff notes.
 
+### Session 11, 22 Aug 2026
+- **Polling reworked from fixed-interval to activity-aware**, replacing
+  Session 10's `visibilitychange`-only patch with a proper three-state
+  scheduler (Active/Asleep/Wake) — full design in §4.6. 1s cadence while
+  active, complete stop (not throttled ticks) after 20s idle or on
+  hidden/closed, immediate catch-up poll on any wake trigger, and an
+  in-flight guard so a slow response never gets joined by an overlapping
+  request.
+- **Raised `/poll` rate limits** in `src/ratelimit.js` to match: 20/min →
+  75/min per session, 60/min → 200/min per IP-hash. The old limits were
+  sized for the flat 4s cadence (~15/min) and would have started
+  rate-limiting a single continuously-active visitor under the new 1s
+  cadence (worst case 60/min) after roughly 20 seconds.
+- PR #17 updated again with this rework.
+
 ---
 
 ## 4. NEXT STEPS (in order)
@@ -688,15 +703,17 @@ Notion write yet — that's Phase 4.
 
 **`GET /poll?session=<id>&after=<ms>`** (`src/index.js` → `handlePoll`):
 - Validates session id format, rate-limited via `checkPollRateLimit()` in
-  `src/ratelimit.js` (20/min/session, 60/min/IP-hash — separate, more
-  generous buckets than `/chat`'s, since polling runs every 4s while the
-  panel is open).
+  `src/ratelimit.js` — **75/min/session, 200/min/IP-hash** (raised in
+  Session 11 to accommodate the 1s active-polling cadence below; the old
+  20/min/60/min buckets were sized for the original fixed 4s interval and
+  would have started rate-limiting a single active visitor after ~20
+  seconds).
 - Returns `pending:<sessionId>` entries newer than `after`, then clears just
   those returned entries from KV.
 - Includes `humanActive: true|false` on every response.
-- **Confirmed working with real traffic** (see Session 9 below) — ~4000–
-  4200ms between consecutive polls, both from the Netlify preview and from
-  `dharunvincent.com` directly.
+- **Confirmed working with real traffic** (Session 9) at the original fixed
+  cadence; Session 11 replaced that cadence with the activity-aware
+  scheduler below (not yet re-verified live as of this writing — see §5).
 
 **`/chat` change:** when `humanActiveUntil` is in the future, Claude is
 never called. The visitor's message is still logged to the Slack thread
@@ -705,12 +722,30 @@ carries a short static reply — *"Dharun's replying to you personally right
 now 🧑‍💻 — keep an eye on the chat, his reply will show up here shortly."* —
 instead of `reply: null` as the original spec draft had it.
 
-**Widget:** the full Phase 3 contract (polling wired to panel open/close,
-5-minute idle cutoff, human-message rendering/styling, status line) was
-already built in from Phase 1 scaffolding. One small addition in Session 10:
-a `visibilitychange` listener fires one immediate `pollOnce()` when the tab
-regains focus (while a session is open and still polling) — see the
-backgrounded-tab gotcha below for why this was needed.
+**Widget polling — activity-aware scheduler (reworked Session 11,
+`assets/chatbot/chatbot.js`):** replaced the original fixed-interval
+polling (Phase 1 scaffolding: flat 4s, 5-minute idle cutoff) with a
+three-state scheduler:
+- **Active** — polls `/poll` every 1s (`ACTIVE_POLL_INTERVAL_MS`) while the
+  visitor has been active (`keydown`, `pointermove`, `scroll`, `touchstart`,
+  `touchmove` — listened for on `document` with `{ passive: true, capture:
+  true }`, so page-level activity counts, not just interaction with the
+  widget itself; `capture: true` is needed because `scroll` doesn't bubble)
+  within the last 20s (`ACTIVITY_IDLE_MS`).
+- **Asleep** — after 20s with no activity, or the instant
+  `document.visibilityState` becomes `"hidden"`, or the panel closes,
+  polling stops completely: `stopPolling()` clears the interval entirely,
+  it isn't just skipped ticks. An idle or backgrounded visitor costs zero
+  requests.
+- **Wake** — any activity event, `visibilitychange` back to `"visible"`,
+  or the panel opening all call `wake()`: one immediate `pollOnce()` plus
+  restarting the Active interval. `wake()` only acts when currently asleep
+  (`!state.pollTimer` check) — once active, high-frequency events like
+  `pointermove`/`scroll` just refresh the activity timestamp and return, so
+  they can't flood `/poll` with redundant immediate calls.
+- **Guard** — a module-level `pollInFlight` flag in `pollOnce()` means a
+  slow response is never joined by a second overlapping request; the next
+  tick just no-ops until the in-flight one resolves.
 
 ### ⚠️ Setup gotchas (read before touching Slack Event Subscriptions again)
 
@@ -729,17 +764,8 @@ backgrounded-tab gotcha below for why this was needed.
    re-confirmation prompt) before it actually starts delivering that event
    type. Skipping this step looks identical to a signature or routing bug
    from the Worker side: silence, no errors, nothing in the logs.
-3. **A backgrounded/inactive browser tab throttles `setInterval` to roughly
-   once a minute** in most browsers (observed directly in Session 9:
-   `wrangler tail` showed polls at the correct 4s cadence while the tab was
-   focused, then ~57–60s apart once it wasn't). This is normal browser
-   power-saving behavior, not a bug in the polling code — a human reply can
-   sit unseen for up to that ~60s window while the visitor's tab is
-   backgrounded. Session 10's `visibilitychange` listener mitigates this by
-   polling immediately the moment the tab becomes visible again, rather
-   than waiting for the throttled interval to fire.
 
-**How to verify (confirmed working end-to-end, Session 10):**
+**How to verify:**
 1. `cd chatbot-worker && npx wrangler deploy`.
 2. Slack app dashboard (`Dharun Chatbot`) → confirm **Socket Mode is Off**
    → Event Subscriptions → Request URL =
@@ -748,15 +774,23 @@ backgrounded-tab gotcha below for why this was needed.
    see gotcha #2).
 3. From the widget, send a message so a session thread exists in
    `#website-chats`. Reply directly in that thread in Slack.
-4. With the tab focused, the visitor's widget shows the reply labeled
-   "Dharun (live) 🧑‍💻" within ~4s, plus the "Dharun is replying
-   personally… 🧑‍💻" status line. If the tab was backgrounded, the reply
-   still arrives — either within ~60s (throttled timer) or immediately on
-   refocus (the `visibilitychange` poll).
-5. Sending another visitor message during the 10-minute `humanActiveUntil`
+4. With the tab focused and active (typing/scrolling/moving the pointer
+   within the last 20s), the visitor's widget should show the reply labeled
+   "Dharun (live) 🧑‍💻" within ~1s, plus the "Dharun is replying
+   personally… 🧑‍💻" status line. If idle >20s or the tab was backgrounded,
+   the reply arrives on the next Wake trigger (any activity, or refocusing
+   the tab).
+5. Confirm the Asleep behavior in devtools: leave the panel open and idle
+   for >20s (no keyboard/pointer/scroll/touch input) — the `/poll` calls in
+   the Network tab should stop entirely, then resume immediately on the
+   next keypress/scroll/pointer move.
+6. Confirm the Guard: throttle the network in devtools and watch that
+   overlapping `GET /poll` requests never appear even under the 1s
+   interval.
+7. Sending another visitor message during the 10-minute `humanActiveUntil`
    window does not get a Claude reply — only the static "Dharun's replying
    to you personally…" line — and still appears in the Slack thread.
-6. `SLACK_SIGNING_SECRET` needed to construct a locally-signed test request
+8. `SLACK_SIGNING_SECRET` needed to construct a locally-signed test request
    is a Cloudflare secret (write-only) and is not in local `.dev.vars` —
    same standing gap as `SLACK_BOT_TOKEN` (§4.5). Not needed for the
    verification above since real Slack signs its own requests correctly.

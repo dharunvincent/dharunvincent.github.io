@@ -3,10 +3,11 @@ const IP_TTL_SECONDS = 2 * 60 * 60; // 2h bucket TTL
 const SESSION_LIMIT = 30; // per session lifetime
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
-// /poll runs on a 4s client-side interval (~15/min), so its limits are
-// per-minute buckets, not the per-hour/lifetime buckets /chat uses.
-const POLL_SESSION_LIMIT = 20; // per minute, per session
-const POLL_IP_LIMIT = 60; // per minute, per IP hash (covers multiple tabs/sessions)
+// /poll runs on a 1s client-side interval while the visitor is active
+// (worst case 60/min sustained), so its limits are per-minute buckets, not
+// the per-hour/lifetime buckets /chat uses.
+const POLL_SESSION_LIMIT = 75; // per minute, per session — 60/min sustained + headroom for wake-triggered immediate polls
+const POLL_IP_LIMIT = 200; // per minute, per IP hash (covers a few concurrent tabs/sessions)
 const POLL_TTL_SECONDS = 65;
 
 async function sha256Hex(text) {

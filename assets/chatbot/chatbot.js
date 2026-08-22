@@ -5,8 +5,8 @@
 
   const SESSION_KEY = "dvbot_session_id";
   const TRANSCRIPT_KEY = "dvbot_transcript";
-  const POLL_INTERVAL_MS = 4000;
-  const POLL_IDLE_LIMIT_MS = 5 * 60 * 1000;
+  const ACTIVE_POLL_INTERVAL_MS = 1000;
+  const ACTIVITY_IDLE_MS = 20 * 1000;
   const MAX_MESSAGE_CHARS = 1000;
   const MAX_HISTORY_TURNS = 10;
 
@@ -259,7 +259,13 @@
     }
   }
 
+  // Guards against a slow network causing overlapping requests — a poll
+  // already in flight is never joined by another one.
+  let pollInFlight = false;
+
   async function pollOnce() {
+    if (pollInFlight) return;
+    pollInFlight = true;
     try {
       const res = await fetch(`${WORKER_URL}/poll?session=${encodeURIComponent(state.sessionId)}&after=${state.afterTs}`);
       if (!res.ok) return;
@@ -272,20 +278,33 @@
       });
     } catch {
       // Silent — polling failures shouldn't interrupt the chat experience.
+    } finally {
+      pollInFlight = false;
     }
   }
 
+  function isPageVisible() {
+    return document.visibilityState !== "hidden";
+  }
+
+  // Active: poll every 1s while the visitor has been active in the last
+  // 20s. The interval itself checks freshness on every tick (rather than a
+  // separate timeout) so a single clock drives both "am I still active"
+  // and "is it time to poll".
   function startPolling() {
     stopPolling();
+    if (!state.isOpen || !isPageVisible()) return;
     state.pollTimer = setInterval(() => {
-      if (Date.now() - state.lastActivityTs > POLL_IDLE_LIMIT_MS) {
+      if (!state.isOpen || !isPageVisible() || Date.now() - state.lastActivityTs > ACTIVITY_IDLE_MS) {
         stopPolling();
         return;
       }
       pollOnce();
-    }, POLL_INTERVAL_MS);
+    }, ACTIVE_POLL_INTERVAL_MS);
   }
 
+  // Asleep: no interval running at all — not just skipped ticks — so an
+  // idle visitor costs nothing.
   function stopPolling() {
     if (state.pollTimer) {
       clearInterval(state.pollTimer);
@@ -293,14 +312,28 @@
     }
   }
 
-  // Backgrounded tabs throttle setInterval to roughly once a minute in most
-  // browsers, so a reply can sit unseen for up to that long. Firing one poll
-  // immediately when the tab regains focus (while a session is open and
-  // still polling) closes that gap without changing the normal 4s cadence.
+  // Wake: on activity, on the tab becoming visible, and on panel open, do
+  // one immediate poll and (re)start the Active interval. Only acts when
+  // currently asleep (no interval running) — while already active this is
+  // a cheap no-op past the state.pollTimer check, so high-frequency events
+  // like pointermove/scroll can call this freely without flooding /poll.
+  function wake() {
+    markActivity();
+    if (state.pollTimer || !state.isOpen || !isPageVisible()) return;
+    pollOnce();
+    startPolling();
+  }
+
+  ["keydown", "pointermove", "scroll", "touchstart", "touchmove"].forEach((type) => {
+    document.addEventListener(type, wake, { passive: true, capture: true });
+  });
+
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && state.isOpen && state.pollTimer) {
-      pollOnce();
+    if (document.visibilityState === "hidden") {
+      stopPolling();
+      return;
     }
+    wake();
   });
 
   let savedScrollY = 0;
@@ -456,7 +489,8 @@
 
     if (isMobileViewport()) lockBodyScroll(true);
     updateMobileViewportSize();
-    startPolling();
+    // Panel open is a Wake trigger: immediate poll, then the Active interval.
+    wake();
     // Focus must happen synchronously here, in the same tick as the user's
     // tap/click — iOS Safari only opens the keyboard on focus that traces
     // directly back to a user gesture; a setTimeout or post-animation focus
