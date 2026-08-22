@@ -1,10 +1,12 @@
 import { handleChat } from "./chat.js";
 import { handleSlackEvents } from "./slack.js";
 import { checkPollRateLimit } from "./ratelimit.js";
+import { pollSession, SessionDO } from "./session-do.js";
+
+export { SessionDO };
 
 const EMBED_BATCH_SIZE = 100;
 const SESSION_ID_RE = /^dv-[0-9a-f]{32,}$/;
-const PENDING_TTL_SECONDS = 60 * 60 * 24;
 
 function originMatchesPattern(origin, pattern) {
   if (!pattern.includes("*")) return origin === pattern;
@@ -47,23 +49,9 @@ async function handlePoll(request, env, corsHeaders) {
   }
 
   const after = Number(url.searchParams.get("after")) || 0;
-  const pendingKey = `pending:${sessionId}`;
-  const pending = (await env.CHAT_KV.get(pendingKey, "json")) || [];
-  const toReturn = pending.filter((m) => m.ts > after);
-  const toKeep = pending.filter((m) => m.ts <= after);
+  const result = await pollSession(env, sessionId, after);
 
-  if (toReturn.length > 0) {
-    if (toKeep.length > 0) {
-      await env.CHAT_KV.put(pendingKey, JSON.stringify(toKeep), { expirationTtl: PENDING_TTL_SECONDS });
-    } else {
-      await env.CHAT_KV.delete(pendingKey);
-    }
-  }
-
-  const sessionMeta = await env.CHAT_KV.get(`sess:${sessionId}`, "json");
-  const humanActive = !!(sessionMeta?.humanActiveUntil && sessionMeta.humanActiveUntil > Date.now());
-
-  return json({ messages: toReturn, humanActive }, 200, corsHeaders);
+  return json({ messages: result.messages || [], humanActive: !!result.humanActive }, 200, corsHeaders);
 }
 
 async function handleReindex(request, env, corsHeaders) {

@@ -1,7 +1,7 @@
+import { appendHumanReply } from "./session-do.js";
+
 const SLACK_API = "https://slack.com/api";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
-const PENDING_TTL_SECONDS = 60 * 60 * 24;
-const HUMAN_ACTIVE_MS = 10 * 60 * 1000;
 const SIGNATURE_MAX_AGE_SECONDS = 5 * 60;
 
 // Slack mrkdwn uses single-asterisk bold and underscore italics, not
@@ -145,6 +145,9 @@ function jsonResponse(body, status) {
 // the visitor, and pauses the bot for this session. Runs inside
 // ctx.waitUntil — the /slack/events handler has already returned 200 by the
 // time this executes, so a failure here never risks Slack's 3s ack window.
+// The write itself goes to the session's Durable Object (session-do.js),
+// not KV — DO storage is strongly consistent, so the very next /poll read
+// against the same session sees this write immediately.
 async function recordHumanReply(env, event) {
   console.log("slack_events_reply_received", "thread_ts=" + event.thread_ts, "text_len=" + (event.text || "").length);
   try {
@@ -155,17 +158,14 @@ async function recordHumanReply(env, event) {
     }
     console.log("slack_events_thread_lookup", "found", "sessionId=" + sessionId);
 
-    const pendingKey = `pending:${sessionId}`;
-    const pending = (await env.CHAT_KV.get(pendingKey, "json")) || [];
-    pending.push({ from: "human", content: event.text || "", ts: Date.now() });
-    await env.CHAT_KV.put(pendingKey, JSON.stringify(pending), { expirationTtl: PENDING_TTL_SECONDS });
-    console.log("slack_events_pending_written", "sessionId=" + sessionId, "pending_count=" + pending.length);
-
-    const sessKey = `sess:${sessionId}`;
-    const sessionMeta = (await env.CHAT_KV.get(sessKey, "json")) || {};
-    sessionMeta.humanActiveUntil = Date.now() + HUMAN_ACTIVE_MS;
-    await env.CHAT_KV.put(sessKey, JSON.stringify(sessionMeta), { expirationTtl: SESSION_TTL_SECONDS });
-    console.log("slack_events_human_active_set", "sessionId=" + sessionId, "until=" + sessionMeta.humanActiveUntil);
+    const result = await appendHumanReply(env, sessionId, event.text || "");
+    console.log(
+      "slack_events_pending_written",
+      "sessionId=" + sessionId,
+      "store=durable_object",
+      "pending_count=" + result.pendingCount,
+      "humanActiveUntil=" + result.humanActiveUntil
+    );
   } catch (err) {
     console.log("slack_event_error", err?.name || "unknown", err?.message || "");
   }

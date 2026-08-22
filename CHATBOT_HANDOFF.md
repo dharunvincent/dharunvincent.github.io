@@ -590,15 +590,39 @@ This pattern was used all through Phase 1 — keep it:
   cadence (worst case 60/min) after roughly 20 seconds.
 - PR #17 updated again with this rework.
 
+### Session 12, 22 Aug 2026
+- **Diagnosed and fixed the live-reply latency issue** (human Slack replies
+  taking 30s+ to reach the widget). Measured via `wrangler tail` — write
+  itself fast (173–429ms), but a full 2-minute window with continuous
+  polling never observed either write's data (`pending_count` went 2→3 and
+  never decreased). Root cause: Workers KV's eventual consistency (writes
+  can take up to 60s to propagate to the edge location serving a read).
+  Full measurement and fix writeup in §4.6 "Live reply latency issue".
+- **Fix**: migrated `pending:<sessionId>` and
+  `sess:<sessionId>.humanActiveUntil` off KV onto a new **Durable Object**
+  (`SessionDO` in new file `chatbot-worker/src/session-do.js`, one instance
+  per session), which gives strong read-after-write consistency. Touched
+  `slack.js`, `index.js`, `chat.js`, and `wrangler.toml` (new DO binding +
+  `new_sqlite_classes` migration — required on the free plan; the first
+  deploy attempt with plain `new_classes` failed with error 10097).
+- Deployed; read path smoke-tested (fresh session → empty/default DO state,
+  no errors). **Write path not yet re-verified live** — next session should
+  start with a `wrangler tail` + real Slack reply test to confirm the fix.
+
 ---
 
 ## 4. NEXT STEPS (in order)
 
-1. **Phase 4 — Notion learning loop** (current phase): "Chatbot Replies" DB
+1. **Re-verify the Phase 3 live-reply latency fix**: `wrangler tail` +
+   a real Slack thread reply, confirm the hop-3 gap (write → first poll
+   returning the reply) is now near-instant instead of the previously
+   measured 3–15+ seconds. See §4.6 "Live reply latency issue" for the
+   exact measurement method used last time.
+2. **Phase 4 — Notion learning loop**: "Chatbot Replies" DB
    (Question / Answer / Session / Date / Tags / **Approved checkbox**),
    owner-approved rows only get embedded into Vectorize on reindex. Visitor
    messages are NEVER embedded — this is a privacy invariant, see spec §3.
-2. **Housekeeping backlog** (small, do opportunistically):
+3. **Housekeeping backlog** (small, do opportunistically):
    - Owner may want the API key rotated periodically — see the expiry note
      in Session 7 above.
    - Consider a nightly GitHub Action for reindex (mirrors the existing
@@ -688,18 +712,21 @@ Notion write yet — that's Phase 4.
 - `type: "event_callback"` with `event.type === "message"`: ignores it if
   `event.bot_id` is set (loop prevention) or there's no `thread_ts` (only
   thread replies count). Otherwise, inside `ctx.waitUntil()`: looks up
-  `thread:<thread_ts>` → `sessionId`, appends `{ from: "human", content, ts }`
-  to `pending:<sessionId>` (24h TTL), and sets
-  `sess:<sessionId>.humanActiveUntil = now + 10 min`.
+  `thread:<thread_ts>` → `sessionId` (still KV — write-once, read-many, no
+  consistency requirement), then appends the reply and sets
+  `humanActiveUntil = now + 10 min` via the session's **Durable Object**
+  (`session-do.js` — see the Live reply latency issue below for why this
+  moved off KV in Session 12).
 - Always returns 200 immediately — verification + type routing happens
-  before the `ctx.waitUntil` call, so the ack isn't delayed by KV latency.
+  before the `ctx.waitUntil` call, so the ack isn't delayed by storage
+  latency.
 - **Diagnostics**: every step logs a specific `console.log` line (never
   message content — only thread_ts, session id, text *length*, event type,
-  ignore reason) so `npx wrangler tail` shows exactly where a request
-  stopped: `slack_events_received` → `slack_events_sig_fail`/`sig_check` →
-  `slack_events_payload_type` → `slack_events_event` →
-  `slack_events_ignored` OR `slack_events_thread_lookup` →
-  `slack_events_pending_written` → `slack_events_human_active_set`.
+  ignore reason, pending count, humanActiveUntil) so `npx wrangler tail`
+  shows exactly where a request stopped: `slack_events_received` →
+  `slack_events_sig_fail`/`sig_check` → `slack_events_payload_type` →
+  `slack_events_event` → `slack_events_ignored` OR
+  `slack_events_thread_lookup` → `slack_events_pending_written`.
 
 **`GET /poll?session=<id>&after=<ms>`** (`src/index.js` → `handlePoll`):
 - Validates session id format, rate-limited via `checkPollRateLimit()` in
@@ -708,15 +735,20 @@ Notion write yet — that's Phase 4.
   20/min/60/min buckets were sized for the original fixed 4s interval and
   would have started rate-limiting a single active visitor after ~20
   seconds).
-- Returns `pending:<sessionId>` entries newer than `after`, then clears just
-  those returned entries from KV.
+- Returns pending entries newer than `after` and clears just those, via the
+  session's Durable Object (`pollSession()` in `session-do.js`) — not KV,
+  as of Session 12 (see Live reply latency issue below).
 - Includes `humanActive: true|false` on every response.
 - **Confirmed working with real traffic** (Session 9) at the original fixed
-  cadence; Session 11 replaced that cadence with the activity-aware
-  scheduler below (not yet re-verified live as of this writing — see §5).
+  cadence and KV-backed storage; Session 11 reworked the cadence to the
+  activity-aware scheduler below, Session 12 moved the storage to a
+  Durable Object. The read path (empty/default state) was smoke-tested
+  after the Session 12 change; a live Slack-reply write-path re-test is
+  still pending as of this writing — see §5.
 
-**`/chat` change:** when `humanActiveUntil` is in the future, Claude is
-never called. The visitor's message is still logged to the Slack thread
+**`/chat` change:** when `humanActiveUntil` is in the future (read from the
+session's Durable Object as of Session 12 — see below), Claude is never
+called. The visitor's message is still logged to the Slack thread
 (`logVisitorMessageToSlack()`, `ctx.waitUntil`-wrapped), and the response
 carries a short static reply — *"Dharun's replying to you personally right
 now 🧑‍💻 — keep an eye on the chat, his reply will show up here shortly."* —
@@ -746,6 +778,105 @@ three-state scheduler:
 - **Guard** — a module-level `pollInFlight` flag in `pollOnce()` means a
   slow response is never joined by a second overlapping request; the next
   tick just no-ops until the in-flight one resolves.
+
+### 🐢 Live reply latency issue (diagnosed and fixed, Session 12)
+
+**Symptom:** after Phase 3 was confirmed working end-to-end (Session 10),
+human replies typed in the Slack thread were taking **30 seconds or more**
+to appear in the visitor's widget — well beyond the ~1s Active polling
+cadence.
+
+**Measurement.** Ran `npx wrangler tail` for 2 minutes while replying
+"PING" in a live session's Slack thread (twice), with per-line
+`console.log` timestamps already in place from Session 9's diagnostics.
+Hop-by-hop, from the actual captured data:
+- **Slack delivery delay (event.ts → Worker receipt):** not measurable —
+  the diagnostic logging captured `thread_ts` and message length, but never
+  logged `event.ts` itself. This hop remains unmeasured; it would need one
+  more log line to check in a future session if ever suspected again.
+- **KV write completion (Worker's own `pending`/`humanActiveUntil` write):**
+  fast in both cases — 429ms and 173ms respectively, measured from
+  `slack_events_received` to `slack_events_pending_written`. The write call
+  itself was never the bottleneck.
+- **First `/poll` after each write, and whether it delivered the reply:**
+  14.98s after the first write, 3.10s after the second. `handlePoll` had no
+  logging at the time, so the poll *response bodies* weren't directly
+  observable — but the `pending_count` value logged on each Slack-side
+  write went **2 → 3 and never decreased** across the full 2-minute
+  window (last poll captured ~75s and ~35s after the two writes,
+  respectively). If any poll during that window had successfully read and
+  cleared the array, the next write would have logged `pending_count=1`,
+  not an incrementing count. It never did — meaning no poll observed either
+  write's data during the entire measurement.
+- **Poll interval while active:** a steady ~1000ms (997–1050ms) during
+  dense polling blocks, confirming the Session 11 scheduler's Active cadence
+  itself was working correctly. Two gaps (16.0s, 42.3s) were also observed,
+  consistent with the scheduler's own Asleep behavior (by design) rather
+  than a bug — but a reply landing during one of those windows would still
+  have to wait for the next Wake regardless of storage backend.
+
+**Root cause, stated plainly:** Cloudflare Workers KV is **eventually
+consistent** — a write can take up to 60 seconds to become visible to a
+read at a different edge location than the one that performed the write.
+The measurement above is the signature of exactly that: the write itself
+completed in under half a second from the Worker's own path, but
+`/poll` reads — potentially served from a different Cloudflare colo — kept
+missing that data for tens of seconds, and never confirmed seeing it at all
+within the observed window. This is not a bug in `recordHumanReply()` or
+`handlePoll()`'s logic; it's an architectural mismatch between KV's
+consistency model and a feature that needs a write to be visible to the
+very next read, seconds later, from anywhere.
+
+**Fix applied:** replaced `pending:<sessionId>` and
+`sess:<sessionId>.humanActiveUntil` in KV with a **Durable Object**, one
+instance per session (`env.SESSION_DO.idFromName(sessionId)`). A DO's
+storage is strongly consistent and single-threaded per instance — a write
+is guaranteed visible to the very next read against that same instance, no
+propagation window.
+- **New file** `chatbot-worker/src/session-do.js`: the `SessionDO` class
+  (`/append-reply`, `/poll`, `/human-active` internal routes over
+  `state.storage`) plus three client helpers —
+  `appendHumanReply(env, sessionId, content)`,
+  `pollSession(env, sessionId, after)`,
+  `getHumanActiveUntil(env, sessionId)`.
+- **`chatbot-worker/src/slack.js`**: `recordHumanReply()` now calls
+  `appendHumanReply()` instead of doing `CHAT_KV.get`/`put` on
+  `pending:<sessionId>` and `sess:<sessionId>`.
+- **`chatbot-worker/src/index.js`**: `handlePoll()` now calls
+  `pollSession()` instead of reading/clearing `pending:<sessionId>` in KV;
+  also exports `{ SessionDO }` so Cloudflare can bind the class.
+- **`chatbot-worker/src/chat.js`**: the human-takeover check now calls
+  `getHumanActiveUntil()` against the DO instead of reading
+  `sessionMeta.humanActiveUntil` from KV. `sess:<sessionId>` in KV now only
+  ever holds `{ threadTs, createdAt }` — humanActiveUntil no longer lives
+  in KV at all, so there's no dual source of truth. Skips the DO round-trip
+  entirely when `sessionMeta` doesn't exist yet (brand new session, no
+  Slack thread, so no human could have taken over).
+- **`chatbot-worker/wrangler.toml`**: new `[[durable_objects.bindings]]`
+  (`name = "SESSION_DO"`, `class_name = "SessionDO"`) and
+  `[[migrations]] tag = "v1" new_sqlite_classes = ["SessionDO"]` — the free
+  plan requires SQLite-backed Durable Objects; the first deploy attempt
+  with plain `new_classes` failed with error code 10097 until this was
+  corrected.
+
+**Status as of this writing:** deployed. The read path was smoke-tested —
+a fresh session's `/chat` then `/poll` correctly returns the DO's default
+empty state with no errors, confirming the binding and wiring work. The
+write path (does a real Slack reply now reach `/poll` fast) has **not yet
+been re-verified live** — that needs one more `wrangler tail` session with
+a real Slack thread reply, watching the same hop-3 gap this time expected
+to be near-instant instead of 3–15+ seconds.
+
+**For quick reference, the two things this latency issue does NOT change**
+(full detail above and below): the **polling design** stays exactly as
+Session 11 built it — 1s cadence while active, completely asleep after 20s
+idle or a hidden tab (interval cleared, not just skipped), one immediate
+wake-poll on any activity/visibility/panel-open, and an in-flight guard so
+a slow response is never joined by an overlapping request — none of that
+needed to change, since the fix is purely on the storage side. And the
+**Socket Mode / mandatory-reinstall gotchas** below are unrelated dashboard
+configuration issues from Sessions 9–10, not storage-related, and remain
+exactly as documented.
 
 ### ⚠️ Setup gotchas (read before touching Slack Event Subscriptions again)
 

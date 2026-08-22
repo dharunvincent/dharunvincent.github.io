@@ -4,6 +4,7 @@ import { getPortfolioKnowledge } from "./knowledge.js";
 import { getAdviceContext } from "./rag.js";
 import { SYSTEM_PROMPT } from "./prompts.js";
 import { logChatToSlack, logVisitorMessageToSlack } from "./slack.js";
+import { getHumanActiveUntil } from "./session-do.js";
 
 const MAX_MESSAGE_CHARS = 1000;
 const MAX_HISTORY_TURNS = 10;
@@ -60,12 +61,20 @@ export async function handleChat(request, env, ctx, corsHeaders) {
     return jsonResponse({ error: "rate_limited", reply: RATE_LIMIT_REPLY }, 429, corsHeaders);
   }
 
-  // Human-takeover check: a Slack thread reply (via /slack/events) sets
-  // humanActiveUntil for 10 minutes. While active, skip Claude entirely —
-  // Dharun is replying live in the Slack thread — but still log the
-  // visitor's message there so he sees it.
+  // sess:<sessionId> in KV only ever holds { threadTs, createdAt } now —
+  // humanActiveUntil lives in the session's Durable Object (session-do.js),
+  // which is strongly consistent (KV's eventual consistency was measured
+  // to add 15-40+ seconds of lag between a Slack reply and it becoming
+  // visible here).
   const sessionMeta = await env.CHAT_KV.get(`sess:${sessionId}`, "json");
-  if (sessionMeta?.humanActiveUntil && sessionMeta.humanActiveUntil > Date.now()) {
+  // No sessionMeta means no Slack thread exists yet for this session, so a
+  // human can't have taken over — skip the DO round-trip entirely.
+  const humanActiveUntil = sessionMeta ? await getHumanActiveUntil(env, sessionId) : 0;
+  if (humanActiveUntil > Date.now()) {
+    // Human-takeover: a Slack thread reply (via /slack/events) sets
+    // humanActiveUntil for 10 minutes. While active, skip Claude entirely —
+    // Dharun is replying live in the Slack thread — but still log the
+    // visitor's message there so he sees it.
     ctx.waitUntil(logVisitorMessageToSlack(env, { sessionMeta, visitorMessage: cleanMessage }));
     return jsonResponse({ reply: HUMAN_ACTIVE_REPLY, sessionId, humanActive: true }, 200, corsHeaders);
   }
