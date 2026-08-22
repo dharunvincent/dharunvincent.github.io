@@ -293,6 +293,16 @@
     }
   }
 
+  // Backgrounded tabs throttle setInterval to roughly once a minute in most
+  // browsers, so a reply can sit unseen for up to that long. Firing one poll
+  // immediately when the tab regains focus (while a session is open and
+  // still polling) closes that gap without changing the normal 4s cadence.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && state.isOpen && state.pollTimer) {
+      pollOnce();
+    }
+  });
+
   let savedScrollY = 0;
 
   // overflow:hidden alone doesn't reliably stop iOS Safari from scrolling

@@ -560,21 +560,30 @@ This pattern was used all through Phase 1 — keep it:
     the standing open item for next session — see §4.6 step 5 for the
     exact re-check order.
 
+### Session 10, 22 Aug 2026
+- **Phase 3 root cause found and fixed by the owner**: **Socket Mode was
+  enabled on the Slack app**, which makes Slack ignore the Events API
+  Request URL entirely and try to deliver over a websocket instead — this
+  is why `/slack/events` received zero requests across all of Session 9's
+  diagnostics despite every dashboard step looking correct. Turning Socket
+  Mode off resolved it; Phase 3 is now confirmed working end-to-end. Full
+  writeup and the other two setup gotchas (mandatory reinstall after adding
+  `message.groups`; backgrounded-tab polling throttling) are in §4.6.
+- **Widget improvement**: added a `visibilitychange` listener in
+  `chatbot.js` that fires one immediate poll when the tab regains focus, so
+  a reply doesn't sit unseen for up to ~60s behind the browser's background
+  timer throttling.
+- PR #17 updated with this fix and the handoff notes.
+
 ---
 
 ## 4. NEXT STEPS (in order)
 
-1. **Phase 3 — Live human takeover** (current phase, ⚠️ built but NOT yet
-   confirmed end-to-end): all the code is in place — see §4.6 for the full
-   spec. What's left is entirely a Slack-dashboard-side diagnosis, not more
-   code: get a real request (even just the `url_verification` handshake) to
-   actually reach `/slack/events`. Start next session with §4.6 step 5's
-   re-check order before writing any new code here.
-2. **Phase 4 — Notion learning loop**: "Chatbot Replies" DB (Question /
-   Answer / Session / Date / Tags / **Approved checkbox**), owner-approved
-   rows only get embedded into Vectorize on reindex. Visitor messages are
-   NEVER embedded — this is a privacy invariant, see spec §3.
-3. **Housekeeping backlog** (small, do opportunistically):
+1. **Phase 4 — Notion learning loop** (current phase): "Chatbot Replies" DB
+   (Question / Answer / Session / Date / Tags / **Approved checkbox**),
+   owner-approved rows only get embedded into Vectorize on reindex. Visitor
+   messages are NEVER embedded — this is a privacy invariant, see spec §3.
+2. **Housekeeping backlog** (small, do opportunistically):
    - Owner may want the API key rotated periodically — see the expiry note
      in Session 7 above.
    - Consider a nightly GitHub Action for reindex (mirrors the existing
@@ -645,7 +654,7 @@ fails the visitor's reply.
 
 ---
 
-## 4.6 PHASE 3 — LIVE HUMAN TAKEOVER (built, branch `phase-2-slack` — ⚠️ Slack-side delivery still unverified)
+## 4.6 PHASE 3 — LIVE HUMAN TAKEOVER (✅ VERIFIED WORKING, branch `phase-2-slack`)
 
 **What it does:** lets Dharun reply to a visitor live by replying in the
 Slack thread; the bot pauses for that session for 10 minutes and the
@@ -696,44 +705,61 @@ carries a short static reply — *"Dharun's replying to you personally right
 now 🧑‍💻 — keep an eye on the chat, his reply will show up here shortly."* —
 instead of `reply: null` as the original spec draft had it.
 
-**Widget:** no changes needed — `assets/chatbot/chatbot.js` already had the
-full Phase 3 contract built in from Phase 1 scaffolding (polling wired to
-panel open/close, 5-minute idle cutoff, human-message rendering/styling,
-status line). Confirmed by code read, and now also confirmed live by real
-polling traffic (Session 9).
+**Widget:** the full Phase 3 contract (polling wired to panel open/close,
+5-minute idle cutoff, human-message rendering/styling, status line) was
+already built in from Phase 1 scaffolding. One small addition in Session 10:
+a `visibilitychange` listener fires one immediate `pollOnce()` when the tab
+regains focus (while a session is open and still polling) — see the
+backgrounded-tab gotcha below for why this was needed.
 
-**How to verify — status as of Session 9, 22 Aug 2026 (⚠️ NOT yet confirmed
-end-to-end):**
+### ⚠️ Setup gotchas (read before touching Slack Event Subscriptions again)
+
+1. **Socket Mode must be OFF.** If Socket Mode is enabled on the Slack app,
+   Slack ignores the Events API **Request URL entirely** and delivers
+   events over a websocket instead — `/slack/events` will never receive
+   anything, with no error anywhere to point at it. This was the actual
+   root cause of an extended diagnostic session (Sessions 9–10) where
+   `wrangler tail` showed zero incoming requests despite a correctly
+   verified Request URL, `message.groups` subscribed, and a reinstalled
+   app. **Check App Settings → Socket Mode is Off** before assuming
+   anything else is broken.
+2. **Reinstalling the app after adding `message.groups` is mandatory, not
+   optional.** Saving the new bot event subscription alone does not
+   activate it — Slack requires a reinstall (the permissions
+   re-confirmation prompt) before it actually starts delivering that event
+   type. Skipping this step looks identical to a signature or routing bug
+   from the Worker side: silence, no errors, nothing in the logs.
+3. **A backgrounded/inactive browser tab throttles `setInterval` to roughly
+   once a minute** in most browsers (observed directly in Session 9:
+   `wrangler tail` showed polls at the correct 4s cadence while the tab was
+   focused, then ~57–60s apart once it wasn't). This is normal browser
+   power-saving behavior, not a bug in the polling code — a human reply can
+   sit unseen for up to that ~60s window while the visitor's tab is
+   backgrounded. Session 10's `visibilitychange` listener mitigates this by
+   polling immediately the moment the tab becomes visible again, rather
+   than waiting for the throttled interval to fire.
+
+**How to verify (confirmed working end-to-end, Session 10):**
 1. `cd chatbot-worker && npx wrangler deploy`.
-2. Slack app dashboard (`Dharun Chatbot`) → Event Subscriptions → Request
-   URL = `https://dv-chatbot.dharunvincent.workers.dev/slack/events` →
-   subscribe to bot event `message.groups` (channel is private) → Save →
-   reinstall the app.
-3. **Confirmed working**: widget polling. Real `GET /poll` traffic captured
-   via `wrangler tail`, ~4s cadence, from both the Netlify preview and
-   production.
-4. **NOT yet confirmed**: any Slack → Worker delivery at all. Across a full
-   `wrangler tail` diagnostic session (steps 1–7 of the dashboard setup
-   done, reinstall reportedly done), **zero** requests from Slack's servers
-   ever reached `/slack/events` — not even the `url_verification` handshake.
-   The only captured request on that route was a manual test curl, which
-   was correctly rejected for a missing signature (proves the code and
-   logging both work; proves nothing about Slack's side).
-5. **Next session should start by re-checking, in order**: (a) does the
-   Request URL still show a green "Verified" checkmark right now in the
-   Slack dashboard — if not, re-enter and re-save it (the endpoint is live
-   now, so verification should succeed on a fresh attempt); (b) is
-   `message.groups` actually listed under "Subscribe to bot events" (a Save
-   before the dropdown selection registers is a known way for this to
-   silently not stick); (c) once both look correct, ask the owner to post a
-   **thread reply** (not a new top-level channel message — `event.thread_ts`
-   must be present or the event is ignored by design) in `#website-chats`
-   while `wrangler tail` runs, and watch for `slack_events_received` →
-   onward in the log chain above to see exactly where it stops, if it stops.
+2. Slack app dashboard (`Dharun Chatbot`) → confirm **Socket Mode is Off**
+   → Event Subscriptions → Request URL =
+   `https://dv-chatbot.dharunvincent.workers.dev/slack/events` → subscribe
+   to bot event `message.groups` → Save → **reinstall the app** (mandatory,
+   see gotcha #2).
+3. From the widget, send a message so a session thread exists in
+   `#website-chats`. Reply directly in that thread in Slack.
+4. With the tab focused, the visitor's widget shows the reply labeled
+   "Dharun (live) 🧑‍💻" within ~4s, plus the "Dharun is replying
+   personally… 🧑‍💻" status line. If the tab was backgrounded, the reply
+   still arrives — either within ~60s (throttled timer) or immediately on
+   refocus (the `visibilitychange` poll).
+5. Sending another visitor message during the 10-minute `humanActiveUntil`
+   window does not get a Claude reply — only the static "Dharun's replying
+   to you personally…" line — and still appears in the Slack thread.
 6. `SLACK_SIGNING_SECRET` needed to construct a locally-signed test request
    is a Cloudflare secret (write-only) and is not in local `.dev.vars` —
-   same standing gap as `SLACK_BOT_TOKEN` (§4.5). Real Slack signs its own
-   requests correctly regardless of this local gap.
+   same standing gap as `SLACK_BOT_TOKEN` (§4.5). Not needed for the
+   verification above since real Slack signs its own requests correctly.
 
 ---
 
