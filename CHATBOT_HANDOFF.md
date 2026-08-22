@@ -529,18 +529,47 @@ This pattern was used all through Phase 1 — keep it:
   is needed.
 - Phase 3 (live human takeover) is next — see §4 Next Steps.
 
+### Session 9, 22 Aug 2026
+- **Phase 3 built**: `POST /slack/events`, a real `GET /poll` (was a stub),
+  and the `/chat` human-active path. Full spec in §4.6 above. Diagnostic
+  `console.log` lines added throughout `/slack/events` so `wrangler tail`
+  shows exactly where a request stops (never logs message content, only
+  thread_ts/session id/text length/event type, per spec rule 8).
+- **Mid-build process note**: an in-flight edit to this file was rejected by
+  the owner, which paused the session before `deploy`/`commit`/`push` ran —
+  the code itself was already correct in the working tree at that point.
+  Confirmed via `git status`/`git log` and fixed by deploying, committing,
+  and pushing what was already written; nothing was lost. Lesson: an
+  uncommitted-but-correct working tree and a "nothing shipped" remote can
+  both be true at once — check `git status` before assuming code is broken
+  when a live test fails.
+- **Live diagnostic session** run with `npx wrangler tail`:
+  - ✅ **Polling confirmed working with real traffic**: ~4000–4200ms between
+    consecutive `GET /poll` calls, captured from both
+    `deploy-preview-16--dharunwebsite.netlify.app` and `dharunvincent.com`
+    directly. The CORS wildcard pattern from Phase 2 (§4.5) is confirmed
+    working against a real preview origin, not just by code review.
+  - ⚠️ **Slack → Worker delivery NOT confirmed**: despite the owner
+    completing the Event Subscriptions dashboard steps (Request URL,
+    `message.groups` subscription, reinstall), zero requests from Slack's
+    servers reached `/slack/events` during the entire diagnostic session —
+    not even the `url_verification` handshake. A manual test curl to the
+    same route was correctly captured and correctly rejected (missing
+    signature), proving the tail capture and the code both work; it proves
+    nothing about whether Slack is actually calling the endpoint. This is
+    the standing open item for next session — see §4.6 step 5 for the
+    exact re-check order.
+
 ---
 
 ## 4. NEXT STEPS (in order)
 
-1. **Phase 3 — Live human takeover** (current phase): `/slack/events`
-   webhook (signature verification with `SLACK_SIGNING_SECRET`, reject
-   timestamps >5 min old), Event Subscriptions URL on the Slack app
-   `Dharun Chatbot` (subscribe to `message.groups` since `#website-chats` is
-   private), `pending:<sessionId>` replies in KV (24h TTL), widget polling
-   `GET /poll` every 4s, `humanActiveUntil` = now + 10 min pauses the bot and
-   forwards visitor messages straight to the Slack thread instead of Claude.
-   See spec §7 `/slack/events` and §2 router table for the exact flow.
+1. **Phase 3 — Live human takeover** (current phase, ⚠️ built but NOT yet
+   confirmed end-to-end): all the code is in place — see §4.6 for the full
+   spec. What's left is entirely a Slack-dashboard-side diagnosis, not more
+   code: get a real request (even just the `url_verification` handshake) to
+   actually reach `/slack/events`. Start next session with §4.6 step 5's
+   re-check order before writing any new code here.
 2. **Phase 4 — Notion learning loop**: "Chatbot Replies" DB (Question /
    Answer / Session / Date / Tags / **Approved checkbox**), owner-approved
    rows only get embedded into Vectorize on reindex. Visitor messages are
@@ -613,6 +642,98 @@ fails the visitor's reply.
    the owner has verified this manually in Slack each time so far.
 5. `git grep -iE "sk-ant|xoxb"` should stay clean — no Slack token ever
    belongs in a tracked file.
+
+---
+
+## 4.6 PHASE 3 — LIVE HUMAN TAKEOVER (built, branch `phase-2-slack` — ⚠️ Slack-side delivery still unverified)
+
+**What it does:** lets Dharun reply to a visitor live by replying in the
+Slack thread; the bot pauses for that session for 10 minutes and the
+visitor's widget shows his reply within ~4s. New route `POST /slack/events`
+and a real `GET /poll` (Phase 1/2 had a stub that always returned empty). No
+Notion write yet — that's Phase 4.
+
+**`POST /slack/events`** (`src/slack.js` → `handleSlackEvents`, wired in
+`src/index.js`, reachable regardless of CORS/Origin — Slack sends none):
+- Verifies Slack's signature: HMAC-SHA256 of `v0:{timestamp}:{rawBody}` with
+  `SLACK_SIGNING_SECRET`, checked via `crypto.subtle.verify` (constant-time);
+  rejects missing headers, timestamps older than 5 minutes, or a bad
+  signature — all with a specific `console.log` reason (see Diagnostics
+  below). Invalid signature → 401 before any payload parsing.
+- `type: "url_verification"` → echoes `{ challenge }`.
+- `type: "event_callback"` with `event.type === "message"`: ignores it if
+  `event.bot_id` is set (loop prevention) or there's no `thread_ts` (only
+  thread replies count). Otherwise, inside `ctx.waitUntil()`: looks up
+  `thread:<thread_ts>` → `sessionId`, appends `{ from: "human", content, ts }`
+  to `pending:<sessionId>` (24h TTL), and sets
+  `sess:<sessionId>.humanActiveUntil = now + 10 min`.
+- Always returns 200 immediately — verification + type routing happens
+  before the `ctx.waitUntil` call, so the ack isn't delayed by KV latency.
+- **Diagnostics**: every step logs a specific `console.log` line (never
+  message content — only thread_ts, session id, text *length*, event type,
+  ignore reason) so `npx wrangler tail` shows exactly where a request
+  stopped: `slack_events_received` → `slack_events_sig_fail`/`sig_check` →
+  `slack_events_payload_type` → `slack_events_event` →
+  `slack_events_ignored` OR `slack_events_thread_lookup` →
+  `slack_events_pending_written` → `slack_events_human_active_set`.
+
+**`GET /poll?session=<id>&after=<ms>`** (`src/index.js` → `handlePoll`):
+- Validates session id format, rate-limited via `checkPollRateLimit()` in
+  `src/ratelimit.js` (20/min/session, 60/min/IP-hash — separate, more
+  generous buckets than `/chat`'s, since polling runs every 4s while the
+  panel is open).
+- Returns `pending:<sessionId>` entries newer than `after`, then clears just
+  those returned entries from KV.
+- Includes `humanActive: true|false` on every response.
+- **Confirmed working with real traffic** (see Session 9 below) — ~4000–
+  4200ms between consecutive polls, both from the Netlify preview and from
+  `dharunvincent.com` directly.
+
+**`/chat` change:** when `humanActiveUntil` is in the future, Claude is
+never called. The visitor's message is still logged to the Slack thread
+(`logVisitorMessageToSlack()`, `ctx.waitUntil`-wrapped), and the response
+carries a short static reply — *"Dharun's replying to you personally right
+now 🧑‍💻 — keep an eye on the chat, his reply will show up here shortly."* —
+instead of `reply: null` as the original spec draft had it.
+
+**Widget:** no changes needed — `assets/chatbot/chatbot.js` already had the
+full Phase 3 contract built in from Phase 1 scaffolding (polling wired to
+panel open/close, 5-minute idle cutoff, human-message rendering/styling,
+status line). Confirmed by code read, and now also confirmed live by real
+polling traffic (Session 9).
+
+**How to verify — status as of Session 9, 22 Aug 2026 (⚠️ NOT yet confirmed
+end-to-end):**
+1. `cd chatbot-worker && npx wrangler deploy`.
+2. Slack app dashboard (`Dharun Chatbot`) → Event Subscriptions → Request
+   URL = `https://dv-chatbot.dharunvincent.workers.dev/slack/events` →
+   subscribe to bot event `message.groups` (channel is private) → Save →
+   reinstall the app.
+3. **Confirmed working**: widget polling. Real `GET /poll` traffic captured
+   via `wrangler tail`, ~4s cadence, from both the Netlify preview and
+   production.
+4. **NOT yet confirmed**: any Slack → Worker delivery at all. Across a full
+   `wrangler tail` diagnostic session (steps 1–7 of the dashboard setup
+   done, reinstall reportedly done), **zero** requests from Slack's servers
+   ever reached `/slack/events` — not even the `url_verification` handshake.
+   The only captured request on that route was a manual test curl, which
+   was correctly rejected for a missing signature (proves the code and
+   logging both work; proves nothing about Slack's side).
+5. **Next session should start by re-checking, in order**: (a) does the
+   Request URL still show a green "Verified" checkmark right now in the
+   Slack dashboard — if not, re-enter and re-save it (the endpoint is live
+   now, so verification should succeed on a fresh attempt); (b) is
+   `message.groups` actually listed under "Subscribe to bot events" (a Save
+   before the dropdown selection registers is a known way for this to
+   silently not stick); (c) once both look correct, ask the owner to post a
+   **thread reply** (not a new top-level channel message — `event.thread_ts`
+   must be present or the event is ignored by design) in `#website-chats`
+   while `wrangler tail` runs, and watch for `slack_events_received` →
+   onward in the log chain above to see exactly where it stops, if it stops.
+6. `SLACK_SIGNING_SECRET` needed to construct a locally-signed test request
+   is a Cloudflare secret (write-only) and is not in local `.dev.vars` —
+   same standing gap as `SLACK_BOT_TOKEN` (§4.5). Real Slack signs its own
+   requests correctly regardless of this local gap.
 
 ---
 

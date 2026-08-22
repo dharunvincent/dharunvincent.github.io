@@ -102,13 +102,27 @@ function hexToBytes(hex) {
 // HMAC-SHA256 of "v0:{timestamp}:{rawBody}" per Slack's signing spec, using
 // crypto.subtle.verify (constant-time) rather than a manual string compare.
 async function verifySlackSignature(env, rawBody, timestamp, signature) {
-  if (!timestamp || !signature) return false;
+  if (!timestamp || !signature) {
+    console.log("slack_events_sig_fail", "missing_headers", "timestamp=" + !!timestamp, "signature=" + !!signature);
+    return false;
+  }
 
   const age = Math.abs(Date.now() / 1000 - Number(timestamp));
-  if (!Number.isFinite(age) || age > SIGNATURE_MAX_AGE_SECONDS) return false;
+  if (!Number.isFinite(age) || age > SIGNATURE_MAX_AGE_SECONDS) {
+    console.log("slack_events_sig_fail", "stale_timestamp", "age_seconds=" + age);
+    return false;
+  }
 
   const match = /^v0=([0-9a-f]+)$/i.exec(signature);
-  if (!match) return false;
+  if (!match) {
+    console.log("slack_events_sig_fail", "bad_signature_format");
+    return false;
+  }
+
+  if (!env.SLACK_SIGNING_SECRET) {
+    console.log("slack_events_sig_fail", "no_signing_secret_configured");
+    return false;
+  }
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -118,7 +132,9 @@ async function verifySlackSignature(env, rawBody, timestamp, signature) {
     ["verify"]
   );
   const base = `v0:${timestamp}:${rawBody}`;
-  return crypto.subtle.verify("HMAC", key, hexToBytes(match[1]), new TextEncoder().encode(base));
+  const ok = await crypto.subtle.verify("HMAC", key, hexToBytes(match[1]), new TextEncoder().encode(base));
+  console.log("slack_events_sig_check", ok ? "ok" : "mismatch");
+  return ok;
 }
 
 function jsonResponse(body, status) {
@@ -130,21 +146,28 @@ function jsonResponse(body, status) {
 // ctx.waitUntil — the /slack/events handler has already returned 200 by the
 // time this executes, so a failure here never risks Slack's 3s ack window.
 async function recordHumanReply(env, event) {
+  console.log("slack_events_reply_received", "thread_ts=" + event.thread_ts, "text_len=" + (event.text || "").length);
   try {
     const sessionId = await env.CHAT_KV.get(`thread:${event.thread_ts}`);
-    if (!sessionId) return;
+    if (!sessionId) {
+      console.log("slack_events_thread_lookup", "not_found", "thread_ts=" + event.thread_ts);
+      return;
+    }
+    console.log("slack_events_thread_lookup", "found", "sessionId=" + sessionId);
 
     const pendingKey = `pending:${sessionId}`;
     const pending = (await env.CHAT_KV.get(pendingKey, "json")) || [];
     pending.push({ from: "human", content: event.text || "", ts: Date.now() });
     await env.CHAT_KV.put(pendingKey, JSON.stringify(pending), { expirationTtl: PENDING_TTL_SECONDS });
+    console.log("slack_events_pending_written", "sessionId=" + sessionId, "pending_count=" + pending.length);
 
     const sessKey = `sess:${sessionId}`;
     const sessionMeta = (await env.CHAT_KV.get(sessKey, "json")) || {};
     sessionMeta.humanActiveUntil = Date.now() + HUMAN_ACTIVE_MS;
     await env.CHAT_KV.put(sessKey, JSON.stringify(sessionMeta), { expirationTtl: SESSION_TTL_SECONDS });
+    console.log("slack_events_human_active_set", "sessionId=" + sessionId, "until=" + sessionMeta.humanActiveUntil);
   } catch (err) {
-    console.log("slack_event_error", err?.name || "unknown");
+    console.log("slack_event_error", err?.name || "unknown", err?.message || "");
   }
 }
 
@@ -152,6 +175,7 @@ async function recordHumanReply(env, event) {
 // verification, url_verification handshake, and event_callback → pending
 // reply + humanActiveUntil. Notion logging (Phase 4) is not built here.
 export async function handleSlackEvents(request, env, ctx) {
+  console.log("slack_events_received", "POST /slack/events");
   const rawBody = await request.text();
   const timestamp = request.headers.get("x-slack-request-timestamp");
   const signature = request.headers.get("x-slack-signature");
@@ -165,8 +189,11 @@ export async function handleSlackEvents(request, env, ctx) {
   try {
     payload = JSON.parse(rawBody);
   } catch {
+    console.log("slack_events_invalid_json");
     return jsonResponse({ error: "invalid_json" }, 400);
   }
+
+  console.log("slack_events_payload_type", payload.type);
 
   if (payload.type === "url_verification") {
     return jsonResponse({ challenge: payload.challenge }, 200);
@@ -174,8 +201,17 @@ export async function handleSlackEvents(request, env, ctx) {
 
   if (payload.type === "event_callback") {
     const event = payload.event || {};
+    console.log(
+      "slack_events_event",
+      "event_type=" + event.type,
+      "bot_id=" + (event.bot_id || "none"),
+      "thread_ts=" + (event.thread_ts || "none"),
+      "channel=" + (event.channel || "none")
+    );
     if (event.type === "message" && !event.bot_id && event.thread_ts) {
       ctx.waitUntil(recordHumanReply(env, event));
+    } else {
+      console.log("slack_events_ignored", "reason=" + (event.bot_id ? "bot_id" : !event.thread_ts ? "no_thread_ts" : "not_message"));
     }
   }
 
