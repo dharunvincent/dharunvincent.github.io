@@ -22,6 +22,22 @@ const PORTFOLIO_PATTERNS = [
   /\bblog\b/i,
 ];
 
+// Named projects, features, and companies from knowledge/*.md that a visitor
+// might ask about without mentioning Dharun by name.
+const PORTFOLIO_ENTITIES = [
+  "r21",
+  "offline download",
+  "upi autopay",
+  "ottplay",
+  "uncle john",
+  "experience bank",
+  "hbo max",
+  "discovery+",
+  "warner bros",
+  "robosoft",
+  "ai sidekick",
+];
+
 // 1. Quick-reply buttons send mode: "advice" explicitly — trust it.
 // 2. Else keyword check for advice.
 // 3. Else keyword/entity check for portfolio.
@@ -34,6 +50,7 @@ export function routeMessage(message, explicitMode) {
 
   if (ADVICE_KEYWORDS.some((kw) => lower.includes(kw))) return "advice";
   if (PORTFOLIO_PATTERNS.some((re) => re.test(message))) return "portfolio";
+  if (PORTFOLIO_ENTITIES.some((e) => lower.includes(e))) return "portfolio";
 
   return "general";
 }
