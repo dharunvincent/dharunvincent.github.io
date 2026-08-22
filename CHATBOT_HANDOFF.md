@@ -360,11 +360,11 @@ This pattern was used all through Phase 1 — keep it:
   deflection). No secrets in git (verified).
 
 ### Repo / branch state
-- **PR #14** (`website-revamp` → `main`) was **merged by the owner on 22 Aug
-  2026**. Phase 1 is live on `main` / production. Phase 2 work happens on a
-  fresh branch off `main` (see Session 7 below) — same rule applies: never
-  commit/push/merge to `main` directly; every phase lands as a PR the owner
-  merges personally.
+- **PR #14** (`website-revamp` → `main`) merged by the owner on 22 Aug 2026
+  — Phase 1 live. **PR #15** (`phase-2-slack` → `main`) merged by the owner
+  on 22 Aug 2026 — Phase 2 (Slack logging) live. Phase 3 work happens on a
+  fresh branch off `main` — same rule applies: never commit/push/merge to
+  `main` directly; every phase lands as a PR the owner merges personally.
 - **Netlify** is connected to the repo: every PR gets a deploy-preview URL
   in a bot comment. Current preview:
   `https://deploy-preview-14--dharunwebsite.netlify.app` (Netlify site name:
@@ -510,25 +510,42 @@ This pattern was used all through Phase 1 — keep it:
   been curl smoke tests against the deployed `/chat` endpoint plus the
   owner's manual device UAT.
 
+### Session 8, 22 Aug 2026
+- **Phase 2 shipped and merged**: PR #15 (`phase-2-slack` → `main`) merged
+  by the owner. Slack session logging is live in production. See §4.5 above
+  for the full current spec of what it does and how to verify it.
+- Two follow-up fixes landed on `phase-2-slack` before merge: (1) the first
+  turn's bot reply was missing from the Slack thread — fixed so it posts as
+  the first threaded reply under the parent, without duplicating the
+  visitor's first message; (2) bot replies showed raw `**markdown**` in
+  Slack — fixed with a `markdownToSlack()` converter. Emoji labels
+  (`🧑 Visitor:` / `🤖 Bot (mode):`) were added last for scannability.
+- **Slack app details** confirmed and recorded in §4.5: app name
+  `Dharun Chatbot`, private channel `#website-chats` (ID `C0BRJCCG9AB`),
+  three secrets (`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`,
+  `SLACK_CHANNEL_ID`) confirmed present in Cloudflare via
+  `wrangler secret list`. Local `.dev.vars` still does not have the Slack
+  values — flagged as a standing gap for whenever local Slack-side testing
+  is needed.
+- Phase 3 (live human takeover) is next — see §4 Next Steps.
+
 ---
 
 ## 4. NEXT STEPS (in order)
 
-1. **Phase 2 — Slack logging** (per spec, in progress/current — see Session 7
-   above for exact status): Slack app creation (owner does the dashboard
-   steps: scopes `chat:write`, `channels:history`, `channels:read`, plus
-   `groups:history`/`groups:read` for the PRIVATE `#website-chats` channel),
-   secrets `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_CHANNEL_ID`,
-   parent-message-per-session + threaded turns.
-2. **Phase 3 — Live human takeover**: `/slack/events` webhook (signature
-   verification), Event Subscriptions URL on the Slack app
-   (`message.groups`), `pending:` replies in KV, widget polling every 4s,
-   `humanActiveUntil` = now + 10 min pauses the bot.
-3. **Phase 4 — Notion learning loop**: "Chatbot Replies" DB (Question /
+1. **Phase 3 — Live human takeover** (current phase): `/slack/events`
+   webhook (signature verification with `SLACK_SIGNING_SECRET`, reject
+   timestamps >5 min old), Event Subscriptions URL on the Slack app
+   `Dharun Chatbot` (subscribe to `message.groups` since `#website-chats` is
+   private), `pending:<sessionId>` replies in KV (24h TTL), widget polling
+   `GET /poll` every 4s, `humanActiveUntil` = now + 10 min pauses the bot and
+   forwards visitor messages straight to the Slack thread instead of Claude.
+   See spec §7 `/slack/events` and §2 router table for the exact flow.
+2. **Phase 4 — Notion learning loop**: "Chatbot Replies" DB (Question /
    Answer / Session / Date / Tags / **Approved checkbox**), owner-approved
    rows only get embedded into Vectorize on reindex. Visitor messages are
    NEVER embedded — this is a privacy invariant, see spec §3.
-4. **Housekeeping backlog** (small, do opportunistically):
+3. **Housekeeping backlog** (small, do opportunistically):
    - Owner may want the API key rotated periodically — see the expiry note
      in Session 7 above.
    - Consider a nightly GitHub Action for reindex (mirrors the existing
@@ -538,26 +555,45 @@ This pattern was used all through Phase 1 — keep it:
    - No automated test suite exists in this repo (`npm test` has no script
      at root or in `chatbot-worker/`). Verification is manual: curl smoke
      tests against `/chat`, and the owner's real-device UAT matrix.
+   - GitHub flagged 1 high-severity Dependabot vulnerability on `main` (seen
+     during the Phase 2 PR push) — not yet looked into.
 
 ---
 
-## 4.5 PHASE 2 — SLACK LOGGING (built, branch `phase-2-slack`)
+## 4.5 PHASE 2 — SLACK LOGGING (✅ LIVE — PR merged to `main`)
 
 **What it does:** one-way session logging to a private Slack channel, no
-live takeover yet (that's Phase 3). New file `chatbot-worker/src/slack.js`,
+live takeover yet (that's Phase 3). Lives in `chatbot-worker/src/slack.js`,
 wired into `chat.js` via `ctx.waitUntil()` so a Slack outage never blocks or
 fails the visitor's reply.
 
+**Slack app / channel:**
+- Slack app name: **`Dharun Chatbot`**.
+- Private channel: **`#website-chats`**, channel ID **`C0BRJCCG9AB`**.
+- Secrets confirmed set on the Worker via Cloudflare (`wrangler secret list`
+  — names only, values are write-only and were never read by any assistant):
+  `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_CHANNEL_ID`.
+- **Local `.dev.vars` does NOT yet contain the Slack values** — only
+  `ANTHROPIC_API_KEY`, `ADMIN_TOKEN`, `IP_SALT` are there. If local
+  `wrangler dev` testing or a local curl against the Slack API is ever
+  needed, the owner has to add the three Slack values himself (same custody
+  pattern used for `ANTHROPIC_API_KEY`: `nano .dev.vars`, never paste into
+  chat) — Cloudflare secrets can't be read back once set.
+
+**Message format (final, after two follow-up fixes this phase):**
 - **New session** (no `sess:<id>` KV record yet): posts one **parent**
-  message to `SLACK_CHANNEL_ID` — `"🆕 New chat — session <id>\n*Visitor:*
-  <first message>"`. Stores `sess:<id> → { threadTs, createdAt }` and the
-  reverse lookup `thread:<ts> → sessionId` in `CHAT_KV` (30-day TTL, matching
-  the existing session-key convention).
-- **Every later turn** (session record already has `threadTs`): posts two
-  replies into that thread — `*Visitor:* <message>` then `*Bot* (<mode>):
-  <reply>` — so the mode (portfolio/advice/general) is visible on every bot
-  line.
-- Only the message text + mode ever reach Slack — no IP, IP hash, or other
+  message — `"🆕 New chat — session <id>\n🧑 *Visitor:* <first message>"` —
+  then, once the reply is ready, posts `"🤖 Bot (<mode>): <reply>"` as the
+  first threaded reply. Stores `sess:<id> → { threadTs, createdAt }` and the
+  reverse lookup `thread:<ts> → sessionId` in `CHAT_KV` (30-day TTL).
+- **Every later turn**: two threaded replies — `"🧑 Visitor: <message>"` then
+  `"🤖 Bot (<mode>): <reply>"` — mode (portfolio/advice/general) visible on
+  every bot line.
+- Bot replies are run through `markdownToSlack()` before posting (converts
+  `**bold**` → Slack's `*bold*`, `*italic*` → `_italic_`) so Claude's
+  markdown renders correctly in Slack instead of showing raw asterisks.
+  Visitor messages are posted as-is (plain text from the widget).
+- Only message text + mode ever reach Slack — no IP, IP hash, or other
   session metadata.
 - CORS was generalized alongside this so every future Netlify PR preview
   works without an `ALLOWED_ORIGINS` edit: `wrangler.toml`'s
@@ -567,17 +603,14 @@ fails the visitor's reply.
 
 **How to verify:**
 1. `cd chatbot-worker && npx wrangler deploy`.
-2. Send two `POST /chat` requests with a fresh `dv-` session id (Origin
-   header = a value in `ALLOWED_ORIGINS`, e.g. `https://dharunvincent.com`).
-3. In the Slack channel, `conversations.history` (and `conversations.replies`
-   for the thread) should show **one parent message** (session label + first
-   visitor message) with **two threaded replies** (second turn's visitor
-   message + bot reply, bot line tagged with its mode).
-4. `SLACK_BOT_TOKEN` needed for that verification curl is a Cloudflare
-   secret (write-only — can't be read back) and is currently **not** in
-   local `.dev.vars`; the owner needs to add it there himself (same custody
-   pattern as `ANTHROPIC_API_KEY`) before an assistant can run that curl
-   locally.
+2. Send `POST /chat` requests with a fresh `dv-` session id (Origin header =
+   a value in `ALLOWED_ORIGINS`, e.g. `https://dharunvincent.com`).
+3. In `#website-chats`: 1 message in a session → parent + 1 threaded bot
+   reply. 2 messages → parent + 1 (turn-1 bot reply) + 2 (turn-2 visitor +
+   bot) = 3 threaded replies total, and so on.
+4. Verification against the live Slack API (`conversations.history`) needs
+   `SLACK_BOT_TOKEN`, which per the note above isn't in local `.dev.vars` —
+   the owner has verified this manually in Slack each time so far.
 5. `git grep -iE "sk-ant|xoxb"` should stay clean — no Slack token ever
    belongs in a tracked file.
 
