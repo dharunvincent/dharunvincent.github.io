@@ -2,10 +2,16 @@ import { handleChat } from "./chat.js";
 
 const EMBED_BATCH_SIZE = 100;
 
+function originMatchesPattern(origin, pattern) {
+  if (!pattern.includes("*")) return origin === pattern;
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  return new RegExp(`^${escaped}$`).test(origin);
+}
+
 function corsHeadersFor(request, allowedOrigins) {
   const origin = request.headers.get("origin") || "";
   const isAllowed =
-    allowedOrigins.includes(origin) ||
+    allowedOrigins.some((pattern) => originMatchesPattern(origin, pattern)) ||
     (origin.startsWith("http://localhost:") && allowedOrigins.some((o) => o.startsWith("http://localhost:")));
 
   return {

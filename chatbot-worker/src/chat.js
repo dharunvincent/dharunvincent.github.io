@@ -3,6 +3,7 @@ import { checkRateLimit } from "./ratelimit.js";
 import { getPortfolioKnowledge } from "./knowledge.js";
 import { getAdviceContext } from "./rag.js";
 import { SYSTEM_PROMPT } from "./prompts.js";
+import { logChatToSlack } from "./slack.js";
 
 const MAX_MESSAGE_CHARS = 1000;
 const MAX_HISTORY_TURNS = 10;
@@ -118,6 +119,10 @@ export async function handleChat(request, env, ctx, corsHeaders) {
     console.log("chat_error", err?.name || "unknown");
     return jsonResponse({ reply: FALLBACK_REPLY, sessionId, humanActive: false }, 200, corsHeaders);
   }
+
+  ctx.waitUntil(
+    logChatToSlack(env, { sessionId, sessionMeta, visitorMessage: cleanMessage, botReply: reply, mode })
+  );
 
   return jsonResponse({ reply, sessionId, humanActive: false }, 200, corsHeaders);
 }
