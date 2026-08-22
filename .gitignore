@@ -1,2 +1,7 @@
 node_modules/
 .DS_Store
+
+# Chatbot worker secrets — never commit
+chatbot-worker/.dev.vars
+chatbot-worker/node_modules/
+chatbot-worker/.wrangler/

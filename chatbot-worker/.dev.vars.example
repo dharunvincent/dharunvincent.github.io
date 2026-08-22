@@ -1,0 +1,14 @@
+# Copy this file to .dev.vars (gitignored) and fill in real values for local
+# `wrangler dev` testing. NEVER commit .dev.vars — see repo .gitignore.
+# In production these are set via `npx wrangler secret put <NAME>`.
+
+ANTHROPIC_API_KEY=
+ADMIN_TOKEN=
+IP_SALT=
+
+# Not needed until Phase 2/3/4 — leave blank for Phase 1
+SLACK_BOT_TOKEN=
+SLACK_SIGNING_SECRET=
+SLACK_CHANNEL_ID=
+NOTION_API_KEY=
+NOTION_REPLIES_DB_ID=

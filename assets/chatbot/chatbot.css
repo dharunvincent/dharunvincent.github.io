@@ -1,0 +1,425 @@
+/* Scoped chatbot widget styles — all selectors prefixed .dvbot- so this
+   never collides with the host site's CSS. Falls back to hardcoded values
+   if the site's design-token variables aren't present on the page. */
+
+.dvbot-launcher,
+.dvbot-panel {
+  --dvbot-orange: var(--orange, #FF6B2B);
+  --dvbot-orange-dim: var(--orange-dim, rgba(255, 107, 43, 0.12));
+  --dvbot-orange-glow: var(--orange-glow, rgba(255, 107, 43, 0.45));
+  --dvbot-surface: #141414;
+  --dvbot-surface-2: #1c1c1c;
+  --dvbot-border: rgba(255, 255, 255, 0.1);
+  --dvbot-text: #f5f5f5;
+  --dvbot-muted: rgba(255, 255, 255, 0.5);
+  --dvbot-font: var(--font, 'Syne', system-ui, sans-serif);
+  box-sizing: border-box;
+  /* Scoped to the widget itself (not :root/site-wide) so it doesn't affect
+     the blog pages' light-mode theme — only tells the OS this specific
+     control is dark, so iOS renders its keyboard/accessory bar to match
+     our always-dark widget regardless of the host page's own theme. */
+  color-scheme: dark;
+}
+.dvbot-launcher *,
+.dvbot-panel * {
+  box-sizing: border-box;
+}
+
+/* Native OS/browser button chrome can apply its own internal rendering
+   scale independent of the CSS layout box (this is what caused the close
+   button to measure a different painted size than its declared width/
+   height — and almost certainly the real reason it looked a different
+   size on iOS vs Android before, since native button styling differs by
+   platform). appearance:none removes that native styling from every
+   custom button so our explicit CSS sizing is what actually renders,
+   identically across browsers/platforms. */
+.dvbot-launcher,
+.dvbot-close,
+.dvbot-send,
+.dvbot-quick-reply {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Author-stylesheet `display` declarations beat the browser's built-in
+   `[hidden] { display: none }` rule regardless of selector specificity
+   (UA origin always loses to author origin for normal declarations), so
+   .dvbot-panel/.dvbot-typing/.dvbot-status setting `display` unconditionally
+   below would otherwise render even while JS sets their `hidden` attribute.
+   This rule restores real hide/show behavior; !important guarantees it wins
+   even though it's declared before the more specific display rules. */
+.dvbot-panel[hidden],
+.dvbot-typing[hidden],
+.dvbot-status[hidden] {
+  display: none !important;
+}
+
+/* ── Launcher ─────────────────────────────────────────── */
+.dvbot-launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--dvbot-orange);
+  color: #0e0e0e;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  isolation: isolate;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 0 0 var(--dvbot-orange-glow);
+  z-index: 999998;
+  font-family: var(--dvbot-font);
+}
+
+.dvbot-launcher-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 var(--dvbot-orange-glow);
+  animation: dvbot-pulse 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dvbot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--dvbot-orange-glow);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(255, 107, 43, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 43, 0);
+  }
+}
+
+.dvbot-launcher-intro {
+  animation: dvbot-bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dvbot-bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ── Panel (desktop/tablet) ───────────────────────────── */
+.dvbot-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 100px;
+  width: 380px;
+  height: min(600px, 80vh);
+  border-radius: 16px;
+  background: var(--dvbot-surface);
+  border: 1px solid var(--dvbot-border);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: auto;
+  isolation: isolate;
+  z-index: 999999;
+  font-family: var(--dvbot-font);
+  color: var(--dvbot-text);
+  animation: dvbot-scale-in 0.18s ease-out;
+}
+
+@keyframes dvbot-scale-in {
+  from {
+    transform: scale(0.94) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.dvbot-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 16px;
+  border-bottom: 1px solid var(--dvbot-border);
+  background: var(--dvbot-surface-2);
+}
+
+.dvbot-header-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.dvbot-close {
+  /* Fixed px size (not a text glyph) so it renders identically on iOS and
+     Android — "✕" as text picks different fallback-font glyph metrics per
+     platform, which is why it looked smaller on iPhone. A 44x44 box also
+     meets the minimum recommended touch target size regardless of the
+     20px icon drawn inside it. */
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--dvbot-muted);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  border-radius: 8px;
+}
+.dvbot-close svg {
+  display: block;
+}
+.dvbot-close:hover,
+.dvbot-close:focus-visible {
+  color: var(--dvbot-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dvbot-status {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  font-size: 0.78rem;
+  color: var(--dvbot-orange);
+  border-bottom: 1px solid var(--dvbot-border);
+}
+
+/* Layout contract for .dvbot-panel's flex column: header/status/typing/
+   input-row/footer are all flex-shrink:0 (fixed height, never compressed);
+   .dvbot-messages is the only flexible item (flex:1 1 auto) and MUST have
+   min-height:0 — a flex item's default min-height is `auto`, which means
+   "never shrink below your content's intrinsic height". Without this, a
+   long message thread refuses to shrink when the panel itself shrinks
+   (e.g. JS resizing it to visualViewport.height for the on-screen
+   keyboard), consuming all the space and pushing the input bar below the
+   panel's clipped (overflow:hidden) bounds — which is exactly what made
+   the input bar disappear when the keyboard opened. */
+.dvbot-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dvbot-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+
+.dvbot-msg-bot {
+  align-self: flex-start;
+}
+
+.dvbot-msg-user {
+  align-self: flex-end;
+}
+
+.dvbot-msg-label {
+  font-size: 0.7rem;
+  color: var(--dvbot-orange);
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+
+.dvbot-bubble {
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dvbot-msg-bot .dvbot-bubble {
+  background: var(--dvbot-surface-2);
+  border: 1px solid var(--dvbot-border);
+  border-top-left-radius: 4px;
+}
+
+.dvbot-msg-human .dvbot-bubble {
+  background: var(--dvbot-orange-dim);
+  border: 1px solid var(--dvbot-orange);
+  border-top-left-radius: 4px;
+}
+
+.dvbot-msg-user .dvbot-bubble {
+  background: var(--dvbot-orange);
+  color: #0e0e0e;
+  border-top-right-radius: 4px;
+}
+
+.dvbot-quick-replies {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-self: flex-start;
+}
+
+.dvbot-quick-reply {
+  background: var(--dvbot-orange-dim);
+  border: 1px solid var(--dvbot-orange);
+  color: var(--dvbot-orange);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--dvbot-font);
+}
+.dvbot-quick-reply:hover,
+.dvbot-quick-reply:focus-visible {
+  background: var(--dvbot-orange);
+  color: #0e0e0e;
+}
+
+.dvbot-typing {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 0 16px 8px;
+}
+
+.dvbot-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dvbot-muted);
+  animation: dvbot-typing-bounce 1.2s infinite ease-in-out;
+}
+.dvbot-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.dvbot-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dvbot-typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.dvbot-input-row {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--dvbot-border);
+}
+
+.dvbot-input {
+  flex: 1;
+  background: var(--dvbot-surface-2);
+  border: 1px solid var(--dvbot-border);
+  border-radius: 9999px;
+  padding: 9px 14px;
+  color: var(--dvbot-text);
+  font-family: var(--dvbot-font);
+  /* Must be a computed >=16px or WebKit auto-zooms the page on focus
+     (and Chrome-on-iOS inherits this since it runs on WebKit too). Use an
+     absolute px value, not rem, so it can never be pulled under 16px by a
+     host-page root font-size change. */
+  font-size: 16px;
+  outline: none;
+}
+.dvbot-input:focus-visible {
+  border-color: var(--dvbot-orange);
+}
+.dvbot-input:disabled {
+  opacity: 0.6;
+}
+
+.dvbot-send {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--dvbot-orange);
+  color: #0e0e0e;
+  cursor: pointer;
+}
+.dvbot-send svg {
+  display: block;
+}
+.dvbot-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dvbot-footer {
+  flex-shrink: 0;
+  padding: 4px 18px 12px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--dvbot-muted);
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* Belt-and-braces alongside the JS position:fixed lock in chatbot.js —
+   harmless on its own, and a fallback if that JS ever fails to run. */
+body.dvbot-scroll-lock {
+  overflow: hidden;
+}
+
+/* ── Mobile bottom sheet (<768px) ─────────────────────── */
+@media (max-width: 767px) {
+  .dvbot-panel {
+    position: fixed;
+    inset: 8vh 0 0 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: auto;
+    border-radius: 20px 20px 0 0;
+  }
+
+  /* Better first-paint guess than vh before JS's visualViewport handler
+     takes over precisely (see updateMobileViewportSize in chatbot.js). */
+  @supports (height: 100dvh) {
+    .dvbot-panel {
+      inset: 8dvh 0 0 0;
+    }
+  }
+
+  .dvbot-launcher {
+    right: 16px;
+    bottom: 16px;
+  }
+}

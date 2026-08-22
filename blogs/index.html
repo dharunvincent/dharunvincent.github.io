@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 
   <!-- ── SEO ──────────────────────────────────────────────── -->
   <meta name="description" content="Dharun Vincent's blog — AI product management, building with AI, PM craft, and vibe coding. Read posts on AI tools, product thinking, and shipping real products." />
@@ -85,8 +85,8 @@
     .blog-card:hover { border-color: rgba(232,93,26,.35); box-shadow: 0 20px 48px -12px rgba(0,0,0,.1), 0 0 0 1px rgba(232,93,26,.1); }
 
     /* Cursor */
-    #cursor-dot  { z-index: 9999; pointer-events: none; }
-    #cursor-ring { z-index: 9998; pointer-events: none; }
+    #cursor-dot  { z-index: 1000001; pointer-events: none; }
+    #cursor-ring { z-index: 1000000; pointer-events: none; }
   </style>
 
   <!-- ── Analytics: Microsoft Clarity ─────────────────────── -->
@@ -227,6 +227,10 @@
 
   <!-- ── Shared JavaScript ──────────────────────────────────── -->
   <script src="../assets/js/main.js"></script>
+
+  <!-- ── AI Chatbot widget ─────────────────────────────────── -->
+  <link rel="stylesheet" href="/assets/chatbot/chatbot.css">
+  <script src="/assets/chatbot/chatbot.js" defer></script>
 
 </body>
 </html>

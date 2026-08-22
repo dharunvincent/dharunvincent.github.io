@@ -150,7 +150,7 @@ function buildPostPage(post, content, rt) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="description" content="${esc(excerpt || title)}" />
   <meta name="author" content="Dharun Vincent R" />
   <meta name="robots" content="index, follow" />
@@ -205,8 +205,8 @@ function buildPostPage(post, content, rt) {
     .mobile-nav-links a:hover { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1A1A1A; }
     footer { border-top-color: rgba(0,0,0,0.08); }
     footer p { color: rgba(26,26,26,0.3); }
-    #cursor-dot  { z-index: 9999; pointer-events: none; }
-    #cursor-ring { z-index: 9998; pointer-events: none; }
+    #cursor-dot  { z-index: 1000001; pointer-events: none; }
+    #cursor-ring { z-index: 1000000; pointer-events: none; }
   </style>
   <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
@@ -302,6 +302,9 @@ ${content}
   </footer>
 
   <script src="/assets/js/main.js"></script>
+
+  <link rel="stylesheet" href="/assets/chatbot/chatbot.css">
+  <script src="/assets/chatbot/chatbot.js" defer></script>
 </body>
 </html>`;
 }
