@@ -606,23 +606,30 @@ This pattern was used all through Phase 1 — keep it:
   `new_sqlite_classes` migration — required on the free plan; the first
   deploy attempt with plain `new_classes` failed with error 10097).
 - Deployed; read path smoke-tested (fresh session → empty/default DO state,
-  no errors). **Write path not yet re-verified live** — next session should
-  start with a `wrangler tail` + real Slack reply test to confirm the fix.
+  no errors). Write path confirmed live in Session 13 — see below.
+
+### Session 13, 22 Aug 2026
+- **Confirmed the Durable Object fix with live traffic.** `wrangler tail` +
+  a real Slack thread reply against a continuously-active real browser
+  session: write-to-delivery gap measured at **773ms**, down from the
+  KV-era **3.10s–14.98s** (and the original PING test's "never confirmed
+  within 2 minutes"). Independently corroborated by a second session's
+  `pending_count` correctly resetting to 1 between two writes, rather than
+  incrementing forever as the old KV path did. Full numbers in §4.6.
+- Phase 3 (live human takeover) is now fully confirmed working end to end —
+  Slack delivery (Session 10), the activity-aware poll scheduler
+  (Session 11), and the storage consistency fix (Sessions 12–13).
 
 ---
 
 ## 4. NEXT STEPS (in order)
 
-1. **Re-verify the Phase 3 live-reply latency fix**: `wrangler tail` +
-   a real Slack thread reply, confirm the hop-3 gap (write → first poll
-   returning the reply) is now near-instant instead of the previously
-   measured 3–15+ seconds. See §4.6 "Live reply latency issue" for the
-   exact measurement method used last time.
-2. **Phase 4 — Notion learning loop**: "Chatbot Replies" DB
+1. **Phase 4 — Notion learning loop** (current phase, Phase 3 now fully
+   confirmed working — see Session 13): "Chatbot Replies" DB
    (Question / Answer / Session / Date / Tags / **Approved checkbox**),
    owner-approved rows only get embedded into Vectorize on reindex. Visitor
    messages are NEVER embedded — this is a privacy invariant, see spec §3.
-3. **Housekeeping backlog** (small, do opportunistically):
+2. **Housekeeping backlog** (small, do opportunistically):
    - Owner may want the API key rotated periodically — see the expiry note
      in Session 7 above.
    - Consider a nightly GitHub Action for reindex (mirrors the existing
@@ -779,7 +786,7 @@ three-state scheduler:
   slow response is never joined by a second overlapping request; the next
   tick just no-ops until the in-flight one resolves.
 
-### 🐢 Live reply latency issue (diagnosed and fixed, Session 12)
+### 🐢 Live reply latency issue (✅ diagnosed, fixed, and confirmed with live traffic — Sessions 12–13)
 
 **Symptom:** after Phase 3 was confirmed working end-to-end (Session 10),
 human replies typed in the Slack thread were taking **30 seconds or more**
@@ -859,13 +866,31 @@ propagation window.
   with plain `new_classes` failed with error code 10097 until this was
   corrected.
 
-**Status as of this writing:** deployed. The read path was smoke-tested —
-a fresh session's `/chat` then `/poll` correctly returns the DO's default
-empty state with no errors, confirming the binding and wiring work. The
-write path (does a real Slack reply now reach `/poll` fast) has **not yet
-been re-verified live** — that needs one more `wrangler tail` session with
-a real Slack thread reply, watching the same hop-3 gap this time expected
-to be near-instant instead of 3–15+ seconds.
+**Status: ✅ confirmed fixed with live traffic (Session 13).** Ran
+`wrangler tail` again with a real Slack thread reply against a genuinely
+live, continuously-active browser session (not a test script). Measured
+end to end:
+- Write completed (`slack_events_pending_written`, via `SessionDO`):
+  `1787399551735`.
+- The poll immediately before the write still showed the old cursor
+  (correctly hadn't seen it yet); the very next poll —
+  `1787399552508`, one normal ~1s tick later — had already advanced its
+  cursor to the new message's timestamp, meaning it delivered the reply.
+- **Gap: 773ms**, against the KV-era measurements of **3.10s and 14.98s**
+  (and the original PING test, where delivery was never confirmed at all
+  within a full 2-minute window). Roughly a 4–20× improvement, and more to
+  the point: sub-second and deterministic instead of multi-second and
+  unreliable.
+- Independent second confirmation: a separate write to a different session
+  logged `pending_count=1` on its *second* Slack reply (209s after the
+  first), rather than incrementing to 2 as the old KV path always did —
+  proof the first reply had actually been polled-and-cleared in between,
+  not just sitting unread.
+
+The read path was also smoke-tested earlier (fresh session → `/poll`
+returns the DO's default empty state, no errors), so both the write and
+read paths through `SessionDO` are now confirmed working with real
+traffic, not just code review.
 
 **For quick reference, the two things this latency issue does NOT change**
 (full detail above and below): the **polling design** stays exactly as
