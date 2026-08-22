@@ -1,6 +1,12 @@
 import { handleChat } from "./chat.js";
+import { handleSlackEvents } from "./slack.js";
+import { checkPollRateLimit } from "./ratelimit.js";
+import { pollSession, SessionDO } from "./session-do.js";
+
+export { SessionDO };
 
 const EMBED_BATCH_SIZE = 100;
+const SESSION_ID_RE = /^dv-[0-9a-f]{32,}$/;
 
 function originMatchesPattern(origin, pattern) {
   if (!pattern.includes("*")) return origin === pattern;
@@ -32,13 +38,20 @@ function json(body, status, corsHeaders) {
 async function handlePoll(request, env, corsHeaders) {
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("session");
-  if (!sessionId || !/^dv-[0-9a-f]{32,}$/.test(sessionId)) {
+  if (!sessionId || !SESSION_ID_RE.test(sessionId)) {
     return json({ error: "invalid_session" }, 400, corsHeaders);
   }
-  // Phase 1 has no Slack live-takeover yet (that's Phase 3), so there is
-  // never anything pending. This keeps the widget's poll loop functional
-  // without needing the Slack/session infrastructure this early.
-  return json({ messages: [], humanActive: false }, 200, corsHeaders);
+
+  const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
+  const { limited } = await checkPollRateLimit(env.CHAT_KV, ip, env.IP_SALT, sessionId);
+  if (limited) {
+    return json({ error: "rate_limited" }, 429, corsHeaders);
+  }
+
+  const after = Number(url.searchParams.get("after")) || 0;
+  const result = await pollSession(env, sessionId, after);
+
+  return json({ messages: result.messages || [], humanActive: !!result.humanActive }, 200, corsHeaders);
 }
 
 async function handleReindex(request, env, corsHeaders) {
@@ -94,6 +107,9 @@ export default {
       }
       if (url.pathname === "/poll" && request.method === "GET") {
         return await handlePoll(request, env, corsHeaders);
+      }
+      if (url.pathname === "/slack/events" && request.method === "POST") {
+        return await handleSlackEvents(request, env, ctx);
       }
       if (url.pathname === "/admin/reindex" && request.method === "POST") {
         return await handleReindex(request, env, corsHeaders);
