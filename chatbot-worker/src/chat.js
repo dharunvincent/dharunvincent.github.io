@@ -3,7 +3,7 @@ import { checkRateLimit } from "./ratelimit.js";
 import { getPortfolioKnowledge } from "./knowledge.js";
 import { getAdviceContext } from "./rag.js";
 import { SYSTEM_PROMPT } from "./prompts.js";
-import { logChatToSlack } from "./slack.js";
+import { logChatToSlack, logVisitorMessageToSlack } from "./slack.js";
 
 const MAX_MESSAGE_CHARS = 1000;
 const MAX_HISTORY_TURNS = 10;
@@ -15,6 +15,8 @@ const FALLBACK_REPLY =
   "I'm napping right now 😴 — try again in a bit, or reach Dharun through the contact section!";
 const RATE_LIMIT_REPLY =
   "Whoa, speedy! 🏎️ Give me a minute to catch my breath.";
+const HUMAN_ACTIVE_REPLY =
+  "Dharun's replying to you personally right now 🧑‍💻 — keep an eye on the chat, his reply will show up here shortly.";
 
 function stripControlChars(str) {
   return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
@@ -58,11 +60,14 @@ export async function handleChat(request, env, ctx, corsHeaders) {
     return jsonResponse({ error: "rate_limited", reply: RATE_LIMIT_REPLY }, 429, corsHeaders);
   }
 
-  // Human-takeover check (Phase 3 sets humanActiveUntil via Slack; Phase 1
-  // never sets it, so this always falls through to Claude for now).
+  // Human-takeover check: a Slack thread reply (via /slack/events) sets
+  // humanActiveUntil for 10 minutes. While active, skip Claude entirely —
+  // Dharun is replying live in the Slack thread — but still log the
+  // visitor's message there so he sees it.
   const sessionMeta = await env.CHAT_KV.get(`sess:${sessionId}`, "json");
   if (sessionMeta?.humanActiveUntil && sessionMeta.humanActiveUntil > Date.now()) {
-    return jsonResponse({ reply: null, sessionId, humanActive: true }, 200, corsHeaders);
+    ctx.waitUntil(logVisitorMessageToSlack(env, { sessionMeta, visitorMessage: cleanMessage }));
+    return jsonResponse({ reply: HUMAN_ACTIVE_REPLY, sessionId, humanActive: true }, 200, corsHeaders);
   }
 
   const mode = routeMessage(cleanMessage, explicitMode);
