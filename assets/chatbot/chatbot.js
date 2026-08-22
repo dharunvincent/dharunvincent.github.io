@@ -447,7 +447,13 @@
     if (isMobileViewport()) lockBodyScroll(true);
     updateMobileViewportSize();
     startPolling();
-    closeEl.focus();
+    // Focus must happen synchronously here, in the same tick as the user's
+    // tap/click — iOS Safari only opens the keyboard on focus that traces
+    // directly back to a user gesture; a setTimeout or post-animation focus
+    // loses that and the keyboard never appears. This reuses the existing
+    // focus/blur listeners below, so the Android viewport-resize fix still
+    // fires exactly as it does when a visitor taps the input manually.
+    inputEl.focus();
     scrollMessagesToBottom();
   }
 
