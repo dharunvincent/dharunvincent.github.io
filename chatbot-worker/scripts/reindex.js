@@ -41,7 +41,7 @@ async function loadDevVars() {
   return { ...env, ...process.env };
 }
 
-function chunkText(text, source) {
+function chunkText(text, source, idPrefix = source) {
   const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   const chunks = [];
   let current = "";
@@ -76,7 +76,7 @@ function chunkText(text, source) {
   });
 
   return overlapped.map((text, i) => ({
-    id: `${source}#${i}`,
+    id: `${idPrefix}#${i}`,
     text,
     source,
   }));
@@ -117,7 +117,7 @@ async function loadApprovedNotionChunks(env) {
       const answer = page.properties?.Answer?.rich_text?.map((t) => t.plain_text).join("") || "";
       if (!question || !answer) continue;
       const text = `Q: ${question}\nDharun's answer: ${answer}`;
-      chunks.push(...chunkText(text, `notion/${page.id}`));
+      chunks.push(...chunkText(text, "notion", `notion/${page.id}`));
     }
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);

@@ -46,6 +46,22 @@ export class SessionDO {
       return json({ humanActiveUntil }, 200);
     }
 
+    // Tracks the visitor's most recent message + the mode it routed to, so
+    // that when Dharun's Slack reply arrives (Phase 4), notion.js knows what
+    // question it's answering without re-reading the KV/Slack transcript.
+    if (url.pathname === "/set-context" && request.method === "POST") {
+      const { message, mode } = await request.json();
+      if (typeof message === "string") await this.state.storage.put("lastVisitorMessage", message);
+      if (typeof mode === "string") await this.state.storage.put("lastMode", mode);
+      return json({ ok: true }, 200);
+    }
+
+    if (url.pathname === "/context" && request.method === "GET") {
+      const message = (await this.state.storage.get("lastVisitorMessage")) || "";
+      const mode = (await this.state.storage.get("lastMode")) || null;
+      return json({ message, mode }, 200);
+    }
+
     return json({ error: "not_found" }, 404);
   }
 }
@@ -76,4 +92,19 @@ export async function getHumanActiveUntil(env, sessionId) {
   const res = await stub.fetch("https://session-do/human-active");
   const body = await res.json();
   return body.humanActiveUntil || 0;
+}
+
+export async function setSessionContext(env, sessionId, { message, mode }) {
+  const stub = getStub(env, sessionId);
+  await stub.fetch("https://session-do/set-context", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message, mode }),
+  });
+}
+
+export async function getSessionContext(env, sessionId) {
+  const stub = getStub(env, sessionId);
+  const res = await stub.fetch("https://session-do/context");
+  return res.json();
 }
