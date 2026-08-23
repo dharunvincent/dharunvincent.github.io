@@ -147,7 +147,9 @@
 <p><strong>I can take over.</strong> If I reply in that Slack thread, my message appears in the visitor&#39;s chat window in about a second, labelled as me. The bot steps back for ten minutes and lets the human talk.</p>
 <p>And the part I&#39;m most pleased with: <strong>every reply I write teaches the bot.</strong> My Slack replies get saved to a Notion database with an Approved checkbox. I tidy them up, tick the box, run one command, and the bot now uses my words to answer similar questions in future. It only ever learns from me. Never from visitors.</p>
 <h2>The architecture</h2>
-<p><img src="images/bbb973fb-6593-48e8-bdad-f8dd2ca2682c.png" alt="01-architecture.png"></p>
+<img src="images/bbb973fb-6593-48e8-bdad-f8dd2ca2682c.webp" alt="01-architecture.png" width="1600" height="960" loading="lazy" decoding="async" />
+
+
 <p>The site itself is static, hosted on GitHub Pages. Static sites can&#39;t run backend code, so the brain lives somewhere else: a Cloudflare Worker. It&#39;s a small program that wakes up when a request arrives, does its job, and goes back to sleep. No server to manage, and the free tier is generous enough that I&#39;ll likely never pay for it.</p>
 <p>The Worker has four doors:</p>
 <ul>
@@ -170,14 +172,18 @@
 <h3>Everything optional fails quietly</h3>
 <p>Slack logging, Notion writes, all of it runs after the visitor already has their answer, inside what Cloudflare calls <code>waitUntil</code>. If Slack is down, the visitor never knows. The core promise- ask and get an answer- never depends on the extras.</p>
 <h2>Four phases in three days</h2>
-<p><img src="images/1f0b1e69-06da-4c62-b57b-46fc9ea03b7e.png" alt="02-four-phases.png"></p>
+<img src="images/1f0b1e69-06da-4c62-b57b-46fc9ea03b7e.webp" alt="02-four-phases.png" width="1600" height="560" loading="lazy" decoding="async" />
+
+
 <p>I wrote a spec before any code existed. Not because I&#39;m disciplined, but because directing an AI coder without a spec is like briefing an agency with &quot;make it pop&quot;. The spec had a phase plan, and every phase shipped as its own pull request. The site worked at every step, even with the Worker switched off.</p>
 <p><strong>Phase 1:</strong> was the bot itself. Widget, router, both memory strategies, rate limits, and the content. Writing the content took longer than the code. Turns out a chatbot with placeholder text is worse than no chatbot, so I pulled my resume and my Notion experience bank together and wrote the about, projects and FAQ files properly.</p>
 <p><strong>Phase 2:</strong> put every chat into Slack. One parent message per session, every turn threaded underneath, bot replies labelled with which mode handled them.</p>
 <p><strong>Phase 3:</strong> made the thread two-way. That&#39;s the live takeover, and it&#39;s where the interesting bugs lived.</p>
 <p><strong>Phase 4:</strong> closed the loop with Notion.</p>
 <h2>Live takeover, and the bug that taught me about storage</h2>
-<p><img src="images/fe4d0c9c-f5d6-45eb-b1fe-a4884a653e50.png" alt="03-live-takeover.png"></p>
+<img src="images/fe4d0c9c-f5d6-45eb-b1fe-a4884a653e50.webp" alt="03-live-takeover.png" width="1600" height="747" loading="lazy" decoding="async" />
+
+
 <p>The flow is simple to describe. I reply in Slack. Slack sends a signed webhook to the Worker. The Worker stores the reply as pending for that session. The widget, which polls every second while the visitor is active, picks it up and shows it as &quot;Dharun (live)&quot;. The bot goes quiet for ten minutes.</p>
 <p>Getting it working was not simple, and two bugs are worth telling.</p>
 <p><strong>Slack sent nothing.</strong> For a solid hour, not one event reached the Worker. The webhook URL was verified, the permissions were right, the app was installed. Zero requests. The cause was a single setting called Socket Mode that had been switched on by default when the app was created. Socket Mode tells Slack &quot;push events down a live connection instead&quot;, and when it&#39;s on, Slack ignores your webhook URL entirely. One toggle, one hour.</p>
@@ -185,7 +191,9 @@
 <p>That second bug is the kind of thing you only learn by building. I&#39;d read the words &quot;eventually consistent&quot; a hundred times. Now I know what they cost.</p>
 <p><strong>The polling design</strong> that came out of it is one I&#39;m quite happy with. The widget polls once a second, but only while the visitor is actually doing something. After 20 seconds of no typing, scrolling or touching, it stops. The moment they move, it polls immediately and resumes. Fast when it matters, silent when it doesn&#39;t, and a visitor who walks away for lunch doesn&#39;t burn my request budget.</p>
 <h2>The learning loop</h2>
-<p><img src="images/679353ec-1b4a-4a8c-91f0-61c7996fa98e.png" alt="04-learning-loop.png"></p>
+<img src="images/679353ec-1b4a-4a8c-91f0-61c7996fa98e.webp" alt="04-learning-loop.png" width="1600" height="667" loading="lazy" decoding="async" />
+
+
 <p>This is the feature I wanted from day one. Every reply I send from Slack lands in a Notion database with the visitor&#39;s question, a session reference, a tag, and an Approved checkbox that starts unchecked. When I have a few minutes, I open the database, clean up anything personal, fix my typos, and tick the box. Then one command on my laptop re-embeds everything approved into the vector memory.</p>
 <p>The next visitor who asks something similar gets an answer grounded in what I actually said. The bot sounds more like me every week, and I stay in control of every word it learns.</p>
 <h2>Tools and cost</h2>
