@@ -366,12 +366,22 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // The layout viewport's height (captured once, before any keyboard has
-  // ever opened) is a stable baseline for "is a keyboard covering part of
-  // the screen right now" — comparing against a *live* window.innerHeight
-  // read is less reliable, since that can also shift for reasons unrelated
-  // to the keyboard (e.g. the browser's own chrome collapsing on scroll).
-  const initialInnerHeight = window.innerHeight;
+  // Baseline "no keyboard" viewport height, used as a geometry-only
+  // fallback for detecting a keyboard when the keyboardOpen flag below
+  // hasn't caught up yet (e.g. the very first focus event on a fresh page
+  // hasn't fully round-tripped). A one-time load-time snapshot doesn't
+  // work here: on iOS, window.innerHeight itself grows once the address
+  // bar auto-hides after the page loads, so a value captured before that
+  // collapse reads too small — and on exactly the first keyboard open,
+  // this fallback could see a viewport that already looks "short" even
+  // with no keyboard, making it think a keyboard-shrunk viewport is
+  // normal-sized and leaving the decorative top gap in place instead of
+  // filling the screen. Track the tallest window.innerHeight seen instead
+  // of a fixed snapshot: a keyboard never changes window.innerHeight on
+  // iOS (only visualViewport does), so this baseline only ever grows or
+  // holds steady as the browser's own chrome settles — it can't be
+  // dragged down by a keyboard opening.
+  let maxKnownViewportHeight = window.innerHeight;
 
   // Whether the on-screen keyboard is expected to be open. Driven primarily
   // by focus/blur on the input — the one deterministic, immediate signal
@@ -389,6 +399,11 @@
   // keyboard with nothing showing behind it; the decorative 8% top gap is
   // only for the closed-keyboard "bottom sheet" look.
   function updateMobileViewportSize() {
+    // Update the baseline before the early-return so it keeps tracking the
+    // tallest known height even while closed/desktop (e.g. a chrome-collapse
+    // resize that fires between opens).
+    if (window.innerHeight > maxKnownViewportHeight) maxKnownViewportHeight = window.innerHeight;
+
     if (!state.isOpen || !isMobileViewport()) {
       overlay.style.top = "";
       overlay.style.bottom = "";
@@ -398,7 +413,7 @@
     const vv = window.visualViewport;
     if (!vv) return;
 
-    const fillFull = keyboardOpen || vv.height < initialInnerHeight * 0.85;
+    const fillFull = keyboardOpen || vv.height < maxKnownViewportHeight * 0.85;
     const topGap = fillFull ? 0 : Math.round(vv.height * 0.08);
 
     // Set both top+height AND explicitly clear `bottom` (rather than
@@ -421,7 +436,12 @@
   // device, keyboard app, and Android vs iOS) — rather than guessing fixed
   // millisecond delays and risking a stale height if the animation runs
   // longer, re-run the fit on every single animation frame for a bounded
-  // window. Wasteful cheap work beats a visible gap.
+  // window. Wasteful cheap work beats a visible gap. 1200ms comfortably
+  // outlasts every keyboard show/hide animation observed across devices
+  // (typically well under 500ms), including the extra settle time seen on
+  // a page's very first keyboard open. Shared by every call site below so
+  // the "how long to keep re-measuring" answer lives in exactly one place.
+  const VIEWPORT_SYNC_DURATION_MS = 1200;
   let viewportSyncRafId = null;
   function runViewportSyncLoop(durationMs) {
     if (viewportSyncRafId !== null) cancelAnimationFrame(viewportSyncRafId);
@@ -441,12 +461,12 @@
   inputEl.addEventListener("focus", () => {
     keyboardOpen = true;
     markActivity();
-    runViewportSyncLoop(1200);
+    runViewportSyncLoop(VIEWPORT_SYNC_DURATION_MS);
   });
 
   inputEl.addEventListener("blur", () => {
     keyboardOpen = false;
-    runViewportSyncLoop(1200);
+    runViewportSyncLoop(VIEWPORT_SYNC_DURATION_MS);
   });
 
   // Native-app-style keyboard dismissal: swiping down or tapping anywhere
@@ -487,8 +507,23 @@
       appendMessage("assistant", GREETING);
     }
 
-    if (isMobileViewport()) lockBodyScroll(true);
+    const mobile = isMobileViewport();
+    if (mobile) lockBodyScroll(true);
     updateMobileViewportSize();
+    // On mobile, start re-measuring from the moment the panel opens rather
+    // than waiting for the input's focus event to do it (below). On a
+    // fresh page, first open is the only time the panel's entrance
+    // animation, the body being pinned position:fixed, AND the keyboard
+    // opening all land in the same burst — on iOS WebKit specifically this
+    // first-ever keyboard/visualViewport activation can settle slightly
+    // later than the focus event itself fires, which left a stale gap on
+    // screen until something else (a later resize/scroll) happened to
+    // re-trigger updateMobileViewportSize. Second and later opens don't
+    // hit this cold-start overlap, which is why the bug only ever showed
+    // up on first open. Starting the loop here closes that window; it's
+    // cheap to also start it again from focus below (runViewportSyncLoop
+    // just restarts its own timer).
+    if (mobile) runViewportSyncLoop(VIEWPORT_SYNC_DURATION_MS);
     // Panel open is a Wake trigger: immediate poll, then the Active interval.
     wake();
     // Focus must happen synchronously here, in the same tick as the user's
