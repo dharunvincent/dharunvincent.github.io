@@ -246,11 +246,22 @@
 
       /* Component 2b — Stats.
          No special positioning — flows naturally below buttons
-         into the second screen. Background is solid black so it
-         sits cleanly below the photo. */
+         into the second screen.
+         margin-top: 2.5rem gives the band breathing room below the
+         Get in Touch button instead of sitting flush against it.
+         background: the flat #000 used to cut a hard line across the
+         fixed hero photo where the band scrolls over it, so it now
+         fades in from transparent instead — 2rem is enough distance
+         for it to read as a blend rather than a seam. padding-top is
+         bumped to 3rem (from 1.5rem) so it clears that 2rem fade with
+         room to spare, keeping the stat numbers themselves on solid
+         black. The bottom stays flat #000 (the gradient's implicit
+         end color) so the band still meets the black section below
+         it seamlessly. */
       .hero-stats {
-        padding: 1.5rem 1.25rem 2rem !important;
-        background: #000;
+        margin-top: 2.5rem;
+        padding: 3rem 1.25rem 2rem !important;
+        background: linear-gradient(to bottom, transparent, #000 2rem);
         position: relative;
         z-index: 3;
       }

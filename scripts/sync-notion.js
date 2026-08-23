@@ -3,6 +3,7 @@
 const { Client }           = require('@notionhq/client');
 const { NotionToMarkdown } = require('notion-to-md');
 const { marked }           = require('marked');
+const sharp                = require('sharp');
 const fs                   = require('fs');
 const path                 = require('path');
 
@@ -57,27 +58,27 @@ function readTime(html) {
 // (prod-files-secure.s3.<region>.amazonaws.com/...) that expire about an
 // hour after being issued. Baking those straight into the generated HTML
 // means every image goes dead shortly after a build. Instead we download
-// each one at build time into the post's own images/ folder and rewrite
-// the reference to a stable relative path.
+// each one at build time, convert it to WebP for a fast first load, and
+// save it into the post's own images/ folder under a stable relative path.
 const S3_HOST_RE = /amazonaws\.com/i;
 const MD_IMAGE_RE = /!\[([^\]]*)\]\((https?:\/\/[^)\s]*amazonaws\.com[^)\s]*)\)/g;
+const WEBP_QUALITY = 80;
+const MAX_IMAGE_WIDTH = 1600;
 
 // The S3 path shape Notion issues is .../<workspace-uuid>/<file-uuid>/<original-filename>?<signed-query>.
-// The file UUID + the original extension give a filename that's stable
-// across builds (the signed query string, which does churn, is dropped).
-function s3FileName(url) {
+// The file UUID gives a filename that's stable across builds (the signed
+// query string, which does churn, is dropped); the original extension is
+// irrelevant since every image is re-encoded to WebP below.
+function s3FileUuid(url) {
   const u = new URL(url);
   const parts = u.pathname.split('/').filter(Boolean);
   if (parts.length < 2) {
     throw new Error(`Cannot derive a stable filename from Notion S3 URL (unexpected path shape): ${url}`);
   }
-  const originalName = decodeURIComponent(parts[parts.length - 1]);
-  const fileUuid = parts[parts.length - 2];
-  const ext = path.extname(originalName) || '.png';
-  return `${fileUuid}${ext}`;
+  return parts[parts.length - 2];
 }
 
-async function downloadImage(url, destPath) {
+async function downloadImageBuffer(url) {
   let res;
   try {
     res = await fetch(url);
@@ -87,26 +88,51 @@ async function downloadImage(url, destPath) {
   if (!res.ok) {
     throw new Error(`Failed to download Notion image, HTTP ${res.status} for ${url}`);
   }
-  const buf = Buffer.from(await res.arrayBuffer());
-  fs.writeFileSync(destPath, buf);
+  return Buffer.from(await res.arrayBuffer());
 }
 
-// Finds every Notion S3 image URL in the markdown, downloads it into
-// imagesDir, and rewrites the markdown to reference the local relative
-// path. Must run before marked.parse() so the rewritten path ends up in
-// the rendered HTML.
+// Downsizes to at most MAX_IMAGE_WIDTH (never upscales) and re-encodes to
+// WebP at WEBP_QUALITY. Returns the final pixel dimensions so callers can
+// set explicit width/height attributes.
+async function convertToWebp(buffer, destPath, url) {
+  try {
+    const { data, info } = await sharp(buffer)
+      .resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer({ resolveWithObject: true });
+    fs.writeFileSync(destPath, data);
+    return { width: info.width, height: info.height };
+  } catch (err) {
+    throw new Error(`Failed to convert Notion image to WebP for ${url}: ${err.message}`);
+  }
+}
+
+// Downloads a Notion S3 image and converts it to WebP in imagesDir. No .png
+// copy is ever written to disk.
+async function downloadAndConvertImage(url, imagesDir) {
+  const buffer   = await downloadImageBuffer(url);
+  const filename = `${s3FileUuid(url)}.webp`;
+  const { width, height } = await convertToWebp(buffer, path.join(imagesDir, filename), url);
+  return { filename, width, height };
+}
+
+// Finds every Notion S3 image in the markdown, downloads + converts it into
+// imagesDir, and replaces the markdown image syntax with an explicit <img>
+// tag carrying the local WebP path plus width/height/loading/decoding so
+// the layout doesn't shift and below-the-fold images don't block first
+// paint. Must run before marked.parse() so the rewritten tag ends up as-is
+// in the rendered HTML (marked passes raw inline HTML through untouched).
 async function localizeS3Images(md, imagesDir) {
-  const urls = new Set();
-  for (const m of md.matchAll(MD_IMAGE_RE)) urls.add(m[2]);
-  if (urls.size === 0) return md;
+  const matches = [...md.matchAll(MD_IMAGE_RE)];
+  if (matches.length === 0) return md;
 
   fs.mkdirSync(imagesDir, { recursive: true });
 
   let result = md;
-  for (const url of urls) {
-    const filename = s3FileName(url);
-    await downloadImage(url, path.join(imagesDir, filename));
-    result = result.split(url).join(`images/${filename}`);
+  for (const [fullMatch, alt, url] of matches) {
+    const { filename, width, height } = await downloadAndConvertImage(url, imagesDir);
+    const imgTag = `<img src="images/${filename}" alt="${esc(alt)}" width="${width}" height="${height}" loading="lazy" decoding="async" />`;
+    result = result.split(fullMatch).join(imgTag);
   }
   return result;
 }
@@ -117,8 +143,7 @@ async function localizeS3Images(md, imagesDir) {
 async function localizeCoverImage(coverUrl, imagesDir) {
   if (!coverUrl || !S3_HOST_RE.test(coverUrl)) return coverUrl;
   fs.mkdirSync(imagesDir, { recursive: true });
-  const filename = s3FileName(coverUrl);
-  await downloadImage(coverUrl, path.join(imagesDir, filename));
+  const { filename } = await downloadAndConvertImage(coverUrl, imagesDir);
   return `images/${filename}`;
 }
 
@@ -404,6 +429,9 @@ async function main() {
     const postDir   = path.join(POSTS, post.slug);
     const imagesDir = path.join(postDir, 'images');
     fs.mkdirSync(postDir, { recursive: true });
+    // Clear any images left over from a previous run (e.g. old .png copies
+    // from before WebP conversion) so regeneration never leaves stale files.
+    fs.rmSync(imagesDir, { recursive: true, force: true });
 
     const mdBlocks = await n2m.pageToMarkdown(page.id);
     let   md       = n2m.toMarkdownString(mdBlocks)?.parent || '';
