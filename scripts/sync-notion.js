@@ -52,6 +52,76 @@ function readTime(html) {
   return Math.max(1, Math.ceil(words / 200));
 }
 
+// ── Notion S3 image localization ────────────────────────────────
+// Notion serves page/cover images as temporary signed S3 URLs
+// (prod-files-secure.s3.<region>.amazonaws.com/...) that expire about an
+// hour after being issued. Baking those straight into the generated HTML
+// means every image goes dead shortly after a build. Instead we download
+// each one at build time into the post's own images/ folder and rewrite
+// the reference to a stable relative path.
+const S3_HOST_RE = /amazonaws\.com/i;
+const MD_IMAGE_RE = /!\[([^\]]*)\]\((https?:\/\/[^)\s]*amazonaws\.com[^)\s]*)\)/g;
+
+// The S3 path shape Notion issues is .../<workspace-uuid>/<file-uuid>/<original-filename>?<signed-query>.
+// The file UUID + the original extension give a filename that's stable
+// across builds (the signed query string, which does churn, is dropped).
+function s3FileName(url) {
+  const u = new URL(url);
+  const parts = u.pathname.split('/').filter(Boolean);
+  if (parts.length < 2) {
+    throw new Error(`Cannot derive a stable filename from Notion S3 URL (unexpected path shape): ${url}`);
+  }
+  const originalName = decodeURIComponent(parts[parts.length - 1]);
+  const fileUuid = parts[parts.length - 2];
+  const ext = path.extname(originalName) || '.png';
+  return `${fileUuid}${ext}`;
+}
+
+async function downloadImage(url, destPath) {
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (err) {
+    throw new Error(`Failed to download Notion image, network error for ${url}: ${err.message}`);
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to download Notion image, HTTP ${res.status} for ${url}`);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  fs.writeFileSync(destPath, buf);
+}
+
+// Finds every Notion S3 image URL in the markdown, downloads it into
+// imagesDir, and rewrites the markdown to reference the local relative
+// path. Must run before marked.parse() so the rewritten path ends up in
+// the rendered HTML.
+async function localizeS3Images(md, imagesDir) {
+  const urls = new Set();
+  for (const m of md.matchAll(MD_IMAGE_RE)) urls.add(m[2]);
+  if (urls.size === 0) return md;
+
+  fs.mkdirSync(imagesDir, { recursive: true });
+
+  let result = md;
+  for (const url of urls) {
+    const filename = s3FileName(url);
+    await downloadImage(url, path.join(imagesDir, filename));
+    result = result.split(url).join(`images/${filename}`);
+  }
+  return result;
+}
+
+// Same treatment for a post's cover image (extract() already reads one
+// from the Cover Image property or the page's native cover, both of which
+// can be the same kind of expiring S3 URL).
+async function localizeCoverImage(coverUrl, imagesDir) {
+  if (!coverUrl || !S3_HOST_RE.test(coverUrl)) return coverUrl;
+  fs.mkdirSync(imagesDir, { recursive: true });
+  const filename = s3FileName(coverUrl);
+  await downloadImage(coverUrl, path.join(imagesDir, filename));
+  return `images/${filename}`;
+}
+
 // ── Fetch all published posts ─────────────────────────────────
 async function fetchPosts() {
   const pages = [];
@@ -145,6 +215,11 @@ function buildPostPage(post, content, rt) {
   const coverHtml = cover
     ? `<div class="blog-post-cover-wrap"><img src="${esc(cover)}" alt="${esc(title)}" class="blog-post-cover" loading="lazy" /></div>`
     : '';
+  // cover is a local relative path (images/<file>.<ext>) once localized, but
+  // og:image must be an absolute URL for link previews/crawlers.
+  const coverOgUrl = cover
+    ? `https://dharunvincent.com/blogs/posts/${esc(slug)}/${esc(cover)}`
+    : 'https://dharunvincent.com/og-image.png';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -161,7 +236,7 @@ function buildPostPage(post, content, rt) {
   <meta property="og:description" content="${esc(excerpt || title)}" />
   <meta property="og:url" content="https://dharunvincent.com/blogs/posts/${esc(slug)}/" />
   <meta property="og:site_name" content="Dharun Vincent" />
-  <meta property="og:image" content="${cover ? esc(cover) : 'https://dharunvincent.com/og-image.png'}" />
+  <meta property="og:image" content="${coverOgUrl}" />
   ${dateStr ? `<meta property="article:published_time" content="${esc(dateStr)}" />` : ''}
   <meta property="article:author" content="Dharun Vincent R" />
   <meta http-equiv="X-Frame-Options" content="DENY" />
@@ -326,13 +401,18 @@ async function main() {
     if (!post.title) { console.warn('Skipping page with no title'); continue; }
     console.log(`  → ${post.title} (${post.slug})`);
 
-    const mdBlocks = await n2m.pageToMarkdown(page.id);
-    const md       = n2m.toMarkdownString(mdBlocks)?.parent || '';
-    const html     = marked.parse(md);
-    const rt       = readTime(html);
-
-    const postDir = path.join(POSTS, post.slug);
+    const postDir   = path.join(POSTS, post.slug);
+    const imagesDir = path.join(postDir, 'images');
     fs.mkdirSync(postDir, { recursive: true });
+
+    const mdBlocks = await n2m.pageToMarkdown(page.id);
+    let   md       = n2m.toMarkdownString(mdBlocks)?.parent || '';
+    md = await localizeS3Images(md, imagesDir);
+    post.cover = await localizeCoverImage(post.cover, imagesDir);
+
+    const html = marked.parse(md);
+    const rt   = readTime(html);
+
     fs.writeFileSync(path.join(postDir, 'index.html'), buildPostPage(post, html, rt), 'utf8');
 
     cards.push(buildCard(post, rt));
