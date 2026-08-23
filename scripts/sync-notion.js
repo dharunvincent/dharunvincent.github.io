@@ -225,7 +225,7 @@ function buildPostPage(post, content, rt) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, interactive-widget=overlays-content" />
   <meta name="description" content="${esc(excerpt || title)}" />
   <meta name="author" content="Dharun Vincent R" />
   <meta name="robots" content="index, follow" />
