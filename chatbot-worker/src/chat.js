@@ -4,7 +4,7 @@ import { getPortfolioKnowledge } from "./knowledge.js";
 import { getAdviceContext } from "./rag.js";
 import { SYSTEM_PROMPT } from "./prompts.js";
 import { logChatToSlack, logVisitorMessageToSlack } from "./slack.js";
-import { getHumanActiveUntil } from "./session-do.js";
+import { getHumanActiveUntil, setSessionContext } from "./session-do.js";
 
 const MAX_MESSAGE_CHARS = 1000;
 const MAX_HISTORY_TURNS = 10;
@@ -76,10 +76,12 @@ export async function handleChat(request, env, ctx, corsHeaders) {
     // Dharun is replying live in the Slack thread — but still log the
     // visitor's message there so he sees it.
     ctx.waitUntil(logVisitorMessageToSlack(env, { sessionMeta, visitorMessage: cleanMessage }));
+    ctx.waitUntil(setSessionContext(env, sessionId, { message: cleanMessage }));
     return jsonResponse({ reply: HUMAN_ACTIVE_REPLY, sessionId, humanActive: true }, 200, corsHeaders);
   }
 
   const mode = routeMessage(cleanMessage, explicitMode);
+  ctx.waitUntil(setSessionContext(env, sessionId, { message: cleanMessage, mode }));
 
   const systemBlocks = [
     { type: "text", text: SYSTEM_PROMPT(env.PUBLIC_EMAIL), cache_control: { type: "ephemeral" } },

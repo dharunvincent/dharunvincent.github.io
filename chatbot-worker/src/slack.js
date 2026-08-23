@@ -1,4 +1,5 @@
-import { appendHumanReply } from "./session-do.js";
+import { appendHumanReply, getSessionContext } from "./session-do.js";
+import { saveHumanReplyToNotion } from "./notion.js";
 
 const SLACK_API = "https://slack.com/api";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -166,6 +167,15 @@ async function recordHumanReply(env, event) {
       "pending_count=" + result.pendingCount,
       "humanActiveUntil=" + result.humanActiveUntil
     );
+
+    // Phase 4: fire-and-forget save to Notion for the owner to review/approve.
+    const context = await getSessionContext(env, sessionId);
+    await saveHumanReplyToNotion(env, {
+      sessionId,
+      question: context.message,
+      answer: event.text || "",
+      mode: context.mode,
+    });
   } catch (err) {
     console.log("slack_event_error", err?.name || "unknown", err?.message || "");
   }
